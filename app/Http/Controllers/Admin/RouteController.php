@@ -109,9 +109,9 @@ class RouteController extends Controller
             if ($hasAnyActionPermission) {
                 $dataTable->addColumn('actions', function ($route) use ($hasEditPermission, $hasDeletePermission, $hasViewPermission) {
                     $actions = '<div class="dropdown">
-                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
-                                type="button" 
-                                data-bs-toggle="dropdown" 
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                type="button"
+                                data-bs-toggle="dropdown"
                                 aria-expanded="false">
                             <i class="bx bx-dots-horizontal-rounded"></i>
                         </button>
@@ -120,7 +120,7 @@ class RouteController extends Controller
                     // Edit button
                     if ($hasEditPermission) {
                         $actions .= '<li>
-                            <a class="dropdown-item" 
+                            <a class="dropdown-item"
                                href="' . route('admin.routes.edit', $route->id) . '">
                                 <i class="bx bx-edit me-2"></i>Edit Route
                             </a>
@@ -140,7 +140,7 @@ class RouteController extends Controller
                     // Manage fares button
                     if ($hasEditPermission) {
                         $actions .= '<li>
-                            <a class="dropdown-item" 
+                            <a class="dropdown-item"
                                href="' . route('admin.routes.manage-fares', $route->id) . '">
                                 <i class="bx bx-money me-2"></i>Manage Fares
                             </a>
@@ -154,8 +154,8 @@ class RouteController extends Controller
                             $actions .= '<li><hr class="dropdown-divider"></li>';
                         }
                         $actions .= '<li>
-                            <a class="dropdown-item text-danger" 
-                               href="javascript:void(0)" 
+                            <a class="dropdown-item text-danger"
+                               href="javascript:void(0)"
                                onclick="deleteRoute(' . $route->id . ')">
                                 <i class="bx bx-trash me-2"></i>Delete Route
                             </a>
@@ -233,6 +233,10 @@ class RouteController extends Controller
                 'sometimes',
                 'boolean',
             ],
+            'stops.*.online_time_table' => [
+                'sometimes',
+                'boolean',
+            ],
         ], [
             'from_city_id.required' => 'From city is required',
             'from_city_id.exists' => 'From city does not exist',
@@ -261,6 +265,7 @@ class RouteController extends Controller
             'stops.*.sequence.min' => 'Sequence must be at least 1',
             'stops.*.sequence.max' => 'Sequence cannot exceed 100',
             'stops.*.online_booking_allowed.boolean' => 'Online booking allowed must be true or false',
+            'stops.*.online_time_table.boolean' => 'Online time table must be true or false',
         ]);
 
         try {
@@ -293,6 +298,7 @@ class RouteController extends Controller
                     'terminal_id' => $stopData['terminal_id'],
                     'sequence' => $stopData['sequence'],
                     'online_booking_allowed' => $stopData['online_booking_allowed'] ?? true,
+                    'online_time_table' => $stopData['online_time_table'] ?? true,
                 ]);
             }
 
@@ -318,7 +324,6 @@ class RouteController extends Controller
         $statuses = RouteStatusEnum::getStatusOptions();
         $cities = City::where('status', 'active')->orderBy('name')->get();
         $terminals = Terminal::with('city')->where('status', 'active')->get();
-
         return view('admin.routes.edit', get_defined_vars());
     }
 
@@ -360,6 +365,10 @@ class RouteController extends Controller
                 'sometimes',
                 'boolean',
             ],
+            'stops.*.online_time_table' => [
+                'sometimes',
+                'boolean',
+            ],
         ], [
             'from_city_id.required' => 'From city is required',
             'from_city_id.exists' => 'Selected from city does not exist',
@@ -377,6 +386,7 @@ class RouteController extends Controller
             'stops.*.sequence.min' => 'Sequence must be at least 1',
             'stops.*.sequence.max' => 'Sequence cannot exceed 100',
             'stops.*.online_booking_allowed.boolean' => 'Online booking allowed must be true or false',
+            'stops.*.online_time_table.boolean' => 'Online time table must be true or false',
         ]);
 
         try {
@@ -431,6 +441,7 @@ class RouteController extends Controller
                     'terminal_id' => $stopData['terminal_id'],
                     'sequence' => $stopData['sequence'],
                     'online_booking_allowed' => $stopData['online_booking_allowed'] ?? true,
+                    'online_time_table' => $stopData['online_time_table'] ?? true,
                 ]);
             }
 

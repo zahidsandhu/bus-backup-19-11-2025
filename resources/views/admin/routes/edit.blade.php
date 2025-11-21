@@ -8,57 +8,57 @@
         border-left: 4px solid #0d6efd;
         box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
     }
-    
+
     .card-header-info {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 0.75rem 1rem;
         border-radius: 8px 8px 0 0;
     }
-    
+
     .card-header-info h5 {
         margin: 0;
         font-weight: 600;
         font-size: 1.1rem;
     }
-    
+
     .form-label {
         font-weight: 600;
         color: #495057;
         margin-bottom: 0.25rem;
         font-size: 0.9rem;
     }
-    
+
     .form-control, .form-select {
         padding: 0.375rem 0.75rem;
         font-size: 0.875rem;
         border-radius: 6px;
     }
-    
+
     .card-body {
         padding: 1rem !important;
     }
-    
+
     .row {
         margin-bottom: 0.5rem;
     }
-    
+
     .btn {
         border-radius: 6px;
         font-weight: 500;
     }
-    
+
     .route-info-card {
         border-left: 3px solid #0dcaf0;
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
     }
-    
+
     .stats-badge {
         font-size: 0.75rem;
         padding: 0.25rem 0.75rem;
         border-radius: 15px;
     }
-    
+
     .info-box {
         background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
         border-left: 4px solid #2196f3;
@@ -66,19 +66,19 @@
         border-radius: 6px;
         margin-bottom: 1rem;
     }
-    
+
     .info-box p {
         margin: 0;
         font-size: 0.85rem;
         color: #1976d2;
     }
-    
+
     .section-divider {
         border-top: 1px solid #e9ecef;
         margin: 1rem 0;
         padding-top: 1rem;
     }
-    
+
     .section-title {
         font-size: 0.95rem;
         font-weight: 600;
@@ -87,13 +87,13 @@
         padding-bottom: 0.5rem;
         border-bottom: 2px solid #e9ecef;
     }
-    
+
     .form-text {
         font-size: 0.75rem;
         color: #6c757d;
         margin-top: 0.25rem;
     }
-    
+
     .stops-section {
         background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
         border-radius: 8px;
@@ -101,30 +101,30 @@
         margin-top: 1rem;
         border-left: 4px solid #0dcaf0;
     }
-    
+
     .stop-item {
         transition: all 0.2s ease;
         border-left: 3px solid #0d6efd !important;
         background: #ffffff;
         border-radius: 6px;
     }
-    
+
     .stop-item:hover {
         box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
         transform: translateX(2px);
     }
-    
+
     .form-check-label {
         cursor: pointer;
         font-size: 0.875rem;
         transition: color 0.2s ease;
     }
-    
+
     .form-check-input:checked + .form-check-label {
         color: #0d6efd;
         font-weight: 600;
     }
-    
+
     .add-stop-btn {
         background: linear-gradient(45deg, #28a745, #20c997);
         border: none;
@@ -135,19 +135,19 @@
         font-size: 0.875rem;
         transition: all 0.2s ease;
     }
-    
+
     .add-stop-btn:hover {
         transform: translateY(-1px);
         box-shadow: 0 3px 8px rgba(40, 167, 69, 0.25);
         color: white;
     }
-    
+
     .badge {
         font-size: 0.75rem;
         width: 24px;
         height: 24px;
     }
-    
+
     .stop-header {
         font-size: 0.9rem;
         font-weight: 600;
@@ -177,11 +177,11 @@
                 <div class="card-header-info">
                     <h5><i class="bx bx-edit me-2"></i>Edit Route: {{ $route->name }}</h5>
                 </div>
-                
+
                 <form action="{{ route('admin.routes.update', $route->id) }}" method="POST" class="row g-3">
                     @method('PUT')
                     @csrf
-                    
+
                     <div class="card-body">
                         <!-- Info Box -->
                         <div class="info-box">
@@ -284,7 +284,7 @@
                                 @enderror
                             </div>
                         </div>
-                        
+
                         <!-- Route Terminals Section -->
                         <div class="section-divider"></div>
                         <div class="section-title">
@@ -335,6 +335,14 @@
                                                             <input class="form-check-input" type="checkbox" name="stops[{{ $stop->id }}][online_booking_allowed]" value="1" id="online_booking_{{ $stop->id }}" {{ $stop->online_booking_allowed ? 'checked' : '' }}>
                                                             <label class="form-check-label" for="online_booking_{{ $stop->id }}">
                                                                 Allow Online Booking from this stop
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-md-12">
+                                                        <div class="form-check form-switch">
+                                                            <input class="form-check-input" type="checkbox" name="stops[{{ $stop->id }}][online_time_table]" value="1" id="online_booking_{{ $stop->id }}" {{ $stop->online_time_table ? 'checked' : '' }}>
+                                                            <label class="form-check-label" for="online_booking_{{ $stop->id }}">
+                                                                Allow Online Time Table for this stop
                                                             </label>
                                                         </div>
                                                     </div>
@@ -401,7 +409,7 @@
             // ----------------------------------
             const stopsContainer = document.getElementById('stops-container');
             const addTerminalBtn = document.getElementById('add-terminal-btn');
-            
+
             // Initialize stop counter based on existing stops
             let stopCounter = stopsContainer.querySelectorAll('.stop-item').length;
 
@@ -414,12 +422,12 @@
                 btn.addEventListener('click', function() {
                     const stopItem = this.closest('.stop-item');
                     const terminalSelect = stopItem.querySelector('.terminal-select');
-                    
+
                     // Destroy Select2 before removing the element
                     if (terminalSelect && $(terminalSelect).hasClass('select2-hidden-accessible')) {
                         $(terminalSelect).select2('destroy');
                     }
-                    
+
                     stopItem.remove();
                     updateSequences();
                 });
@@ -446,7 +454,7 @@
                         <i class="bx bx-trash"></i>
                     </button>
                 </div>
-    
+
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label">Terminal <span class="text-danger">*</span></label>
@@ -459,9 +467,9 @@
                             @endforeach
                         </select>
                     </div>
-    
+
                     <input type="hidden" class="sequence-input" name="stops[new_${stopCounter}][sequence]" value="${stopCounter}">
-    
+
                     <div class="col-md-12">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="stops[new_${stopCounter}][online_booking_allowed]" value="1" id="online_booking_new_${stopCounter}" checked>
@@ -489,7 +497,7 @@
                 stopDiv.remove();
                 updateSequences();
             });
-            
+
             // Update sequences after adding
             updateSequences();
             }

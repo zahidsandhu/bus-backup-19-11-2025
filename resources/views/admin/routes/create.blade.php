@@ -386,7 +386,7 @@
                         <i class="bx bx-trash"></i>
                     </button>
                 </div>
-    
+
                 <div class="row g-3">
                     <div class="col-md-12">
                         <label class="form-label">Terminal <span class="text-danger">*</span></label>
@@ -399,14 +399,22 @@
                             @endforeach
                         </select>
                     </div>
-    
+
                     <input type="hidden" class="sequence-input" name="stops[${stopCounter}][sequence]" value="${stopCounter}">
-    
+
                     <div class="col-md-12">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="stops[${stopCounter}][online_booking_allowed]" value="1" id="online_booking_${stopCounter}" checked>
                             <label class="form-check-label" for="online_booking_${stopCounter}">
                                 Allow Online Booking from this stop
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-12">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="stops[${stopCounter}][online_time_table]" value="1" id="online_time_table_${stopCounter}" checked>
+                            <label class="form-check-label" for="online_time_table_${stopCounter}">
+                                Allow Online Time Table for this stop
                             </label>
                         </div>
                     </div>

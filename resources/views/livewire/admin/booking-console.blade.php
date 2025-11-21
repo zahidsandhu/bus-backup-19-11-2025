@@ -136,8 +136,12 @@
                 <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6">
                     <div class="card shadow-sm h-100 border-0">
                         <div class="card-header bg-white border-bottom">
-                            <h6 class="mb-0 fw-semibold text-dark">
-                                <i class="fas fa-chair"></i> Seat Map
+                            <h6 class="mb-0 fw-semibold text-dark" id="bus-name">
+                                @if ($tripData?->bus_id && $tripData?->bus)
+                                    {{ $tripData?->bus_name }} ({{ $tripData?->bus_registration_number }})
+                                @else
+                                    <i class="fas fa-chair"></i> Seat Map
+                                @endif
                             </h6>
                         </div>
                         <div class="card-body p-2 scrollable-content">
@@ -183,7 +187,7 @@
                                                         @endphp
                                                         <button type="button"
                                                             wire:click="selectSeat({{ $seat }})"
-                                                            class="seat-btn 
+                                                            class="seat-btn
                                                                     @if ($status === 'booked') @if ($seatGender === 'male') seat-booked-male
                                                                         @elseif($seatGender === 'female') seat-booked-female
                                                                         @else seat-booked-male @endif
@@ -242,7 +246,7 @@ seat-available
                                                         @endphp
                                                         <button type="button"
                                                             wire:click="selectSeat({{ $seat }})"
-                                                            class="seat-btn 
+                                                            class="seat-btn
                                                                     @if ($status === 'booked') @if ($seatGender === 'male') seat-booked-male
                                                                         @elseif($seatGender === 'female') seat-booked-female
                                                                         @else seat-booked-male @endif
@@ -303,7 +307,7 @@ seat-available
                                                     @endphp
                                                     <button type="button"
                                                         wire:click="selectSeat({{ $seat }})"
-                                                        class="seat-btn 
+                                                        class="seat-btn
                                                                 @if ($status === 'booked') @if ($seatGender === 'male') seat-booked-male
                                                                     @elseif($seatGender === 'female') seat-booked-female
                                                                     @else seat-booked-male @endif
@@ -353,7 +357,7 @@ seat-available
                                                         @endphp
                                                         <button type="button"
                                                             wire:click="selectSeat({{ $seat }})"
-                                                            class="seat-btn 
+                                                            class="seat-btn
                                                                     @if ($status === 'booked') @if ($seatGender === 'male') seat-booked-male
                                                                         @elseif($seatGender === 'female') seat-booked-female
                                                                         @else seat-booked-male @endif
@@ -411,7 +415,7 @@ seat-available
                                                         @endphp
                                                         <button type="button"
                                                             wire:click="selectSeat({{ $seat }})"
-                                                            class="seat-btn 
+                                                            class="seat-btn
                                                                     @if ($status === 'booked') @if ($seatGender === 'male') seat-booked-male
                                                                         @elseif($seatGender === 'female') seat-booked-female
                                                                         @else seat-booked-male @endif
@@ -924,26 +928,26 @@ seat-available
                                 $isPhoneBooking = $bookingType === 'phone';
                                 $isCashPayment = $paymentMethod === 'cash';
                                 $isPaymentComplete = $amountReceivedValue >= $finalAmountValue;
-                                
+
                                 // Disable only for counter + cash + incomplete payment
                                 // Enable for phone bookings (always)
                                 // Enable for counter bookings with non-cash payment
                                 // Enable for counter + cash if payment is complete
-                                $canConfirmBooking = $isPhoneBooking || 
-                                                    ($isCounterBooking && !$isCashPayment) || 
+                                $canConfirmBooking = $isPhoneBooking ||
+                                                    ($isCounterBooking && !$isCashPayment) ||
                                                     ($isCounterBooking && $isCashPayment && $isPaymentComplete && $finalAmountValue > 0);
                             @endphp
-                            
+
                             @if (!$canConfirmBooking && $isCounterBooking && $isCashPayment && $finalAmountValue > 0)
                                 <div class="alert alert-warning mb-2 p-2 small">
-                                    <i class="fas fa-exclamation-triangle"></i> 
-                                    <strong>Payment Incomplete:</strong> Amount received (PKR {{ number_format($amountReceivedValue, 2) }}) 
-                                    is less than final amount (PKR {{ number_format($finalAmountValue, 2) }}). 
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <strong>Payment Incomplete:</strong> Amount received (PKR {{ number_format($amountReceivedValue, 2) }})
+                                    is less than final amount (PKR {{ number_format($finalAmountValue, 2) }}).
                                     Please enter the full amount to proceed.
                                 </div>
                             @endif
-                            
-                            <button class="btn btn-success w-100 fw-bold py-2 small" 
+
+                            <button class="btn btn-success w-100 fw-bold py-2 small"
                                 wire:click="confirmBooking"
                                 wire:loading.attr="disabled"
                                 @if (!$canConfirmBooking) disabled @endif

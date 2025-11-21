@@ -511,10 +511,10 @@ class BookingConsole extends Component
                 throw new \Exception('Route not found for selected timetable');
             }
 
-            $trip = Trip::where('timetable_id', $timetable->id)
+            $trip = Trip::leftJoin('buses', 'trips.bus_id', '=', 'buses.id')->where('timetable_id', $timetable->id)
                 ->whereDate('departure_date', $this->travelDate)
+                ->select('trips.*', 'buses.name as bus_name', 'buses.registration_number as bus_registration_number')
                 ->first();
-
             if (! $trip) {
                 $tripFactory = app(TripFactoryService::class);
                 $trip = $tripFactory->createFromTimetable($timetable->id, $this->travelDate);
@@ -1589,7 +1589,9 @@ class BookingConsole extends Component
 
             // Reload trip with new bus assignment
             $trip->refresh();
+            $trip = Trip::leftJoin('buses', 'trips.bus_id', '=', 'buses.id')->select('trips.*', 'buses.name as bus_name', 'buses.registration_number as bus_registration_number')->find($trip->id);
             $trip->load(['stops.terminal:id,name,code', 'originStop', 'bus.busLayout']);
+
 
             // Get updated seat count from the newly assigned bus
             $availabilityService = app(AvailabilityService::class);
