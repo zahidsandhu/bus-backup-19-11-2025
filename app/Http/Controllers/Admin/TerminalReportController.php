@@ -14,7 +14,6 @@ use App\Models\GeneralSetting;
 use App\Models\Route;
 use App\Models\Terminal;
 use App\Models\User;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
@@ -693,11 +692,14 @@ class TerminalReportController extends Controller
             'generated_at' => Carbon::now()->format('d M Y, H:i'),
         ];
 
-        $pdf = Pdf::loadView('admin.terminal-reports.export-advance-booking', $data)
-            ->setPaper('a4', 'landscape')
-            ->setOption('enable-local-file-access', true);
+        // TODO: Install barryvdh/laravel-dompdf package for PDF export
+        // $pdf = Pdf::loadView('admin.terminal-reports.export-advance-booking', $data)
+        //     ->setPaper('a4', 'landscape')
+        //     ->setOption('enable-local-file-access', true);
+        // return $pdf->download($filename);
 
-        return $pdf->download($filename);
+        // Temporary: Return view for now until PDF package is installed
+        return view('admin.terminal-reports.export-advance-booking', $data);
     }
 
     private function calculateStats($bookings, $expenses): array
@@ -773,6 +775,489 @@ class TerminalReportController extends Controller
             ],
             'payment_methods' => $paymentMethods,
             'channels' => $channels,
+        ];
+    }
+
+    public function cancellationReport(): View
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        if ($canViewAllReports) {
+            $terminals = Terminal::where('status', TerminalEnum::ACTIVE->value)
+                ->orderBy('name')
+                ->get(['id', 'name', 'code']);
+            $canSelectTerminal = true;
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+
+            $terminals = Terminal::where('id', $user->terminal_id)
+                ->where('status', TerminalEnum::ACTIVE->value)
+                ->get(['id', 'name', 'code']);
+            $canSelectTerminal = false;
+        }
+
+        if ($canViewAllReports) {
+            $users = User::whereHas('bookedBookings')
+                ->orderBy('name')
+                ->get(['id', 'name', 'email']);
+        } else {
+            $users = User::where('id', $user->id)
+                ->get(['id', 'name', 'email']);
+        }
+
+        $paymentMethods = collect(PaymentMethodEnum::cases())->map(function ($method) {
+            return [
+                'value' => $method->value,
+                'label' => $method->getLabel(),
+            ];
+        })->toArray();
+
+        $channels = ChannelEnum::cases();
+
+        return view('admin.terminal-reports.cancellation-report', [
+            'terminals' => $terminals,
+            'canSelectTerminal' => $canSelectTerminal,
+            'canViewAllReports' => $canViewAllReports,
+            'users' => $users,
+            'selectedUserId' => $canViewAllReports ? null : $user->id,
+            'paymentMethods' => $paymentMethods,
+            'channels' => $channels,
+        ]);
+    }
+
+    public function getCancellationData(Request $request): JsonResponse
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        $validationRules = [
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'route_id' => 'nullable|exists:routes,id',
+        ];
+
+        if ($canViewAllReports) {
+            $validationRules['terminal_id'] = 'required|exists:terminals,id';
+            $validationRules['cancelled_by_user_id'] = 'nullable|exists:users,id';
+        } else {
+            $validationRules['terminal_id'] = 'nullable';
+            $validationRules['cancelled_by_user_id'] = 'nullable';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        if ($canViewAllReports) {
+            $terminalId = $validated['terminal_id'];
+            if (! $terminalId) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'Terminal ID is required',
+                ], 400);
+            }
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+
+            if ($request->filled('terminal_id') && (int) $request->input('terminal_id') !== $user->terminal_id) {
+                abort(403, 'You are not allowed to access this terminal.');
+            }
+
+            if ($request->filled('cancelled_by_user_id') && (int) $request->input('cancelled_by_user_id') !== $user->id) {
+                abort(403, 'You are not allowed to view other user reports.');
+            }
+
+            $terminalId = $user->terminal_id;
+        }
+
+        $terminal = Terminal::findOrFail($terminalId);
+
+        // Build date range
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+        // Get cancelled bookings
+        $query = Booking::query()
+            ->whereHas('fromStop', function ($q) use ($terminalId) {
+                $q->where('terminal_id', $terminalId);
+            })
+            ->whereNotNull('cancelled_at')
+            ->whereBetween('cancelled_at', [$startDate, $endDate])
+            ->with([
+                'fromStop.terminal',
+                'toStop.terminal',
+                'seats',
+                'passengers',
+                'user',
+                'bookedByUser',
+                'cancelledByUser',
+                'trip.route',
+            ]);
+
+        // Apply filters
+        if ($request->filled('cancelled_by_user_id')) {
+            $query->where('cancelled_by_user_id', $request->cancelled_by_user_id);
+        }
+
+        if ($request->filled('route_id')) {
+            $query->whereHas('trip.route', function ($q) use ($request) {
+                $q->where('id', $request->route_id);
+            });
+        }
+
+        $cancelledBookings = $query->get();
+
+        // Calculate statistics
+        $stats = $this->calculateCancellationStats($cancelledBookings);
+
+        // Get cancellation reasons
+        $cancellationReasons = $cancelledBookings
+            ->whereNotNull('cancellation_reason')
+            ->groupBy('cancellation_reason')
+            ->map(function ($group) {
+                return [
+                    'reason' => $group->first()->cancellation_reason,
+                    'count' => $group->count(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->take(10)
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'terminal' => [
+                'id' => $terminal->id,
+                'name' => $terminal->name,
+                'code' => $terminal->code,
+            ],
+            'stats' => $stats,
+            'cancellation_reasons' => $cancellationReasons,
+        ]);
+    }
+
+    public function getCancellationBookingsData(Request $request)
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        $validationRules = [
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'route_id' => 'nullable|exists:routes,id',
+        ];
+
+        if ($canViewAllReports) {
+            $validationRules['terminal_id'] = 'required|exists:terminals,id';
+        } else {
+            $validationRules['terminal_id'] = 'nullable';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        if ($canViewAllReports) {
+            $terminalId = $validated['terminal_id'];
+            if (! $terminalId) {
+                return response()->json(['error' => 'Terminal ID is required'], 400);
+            }
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+            $terminalId = $user->terminal_id;
+        }
+
+        // Build date range
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+        $query = Booking::query()
+            ->whereHas('fromStop', function ($q) use ($terminalId) {
+                $q->where('terminal_id', $terminalId);
+            })
+            ->whereNotNull('cancelled_at')
+            ->whereBetween('cancelled_at', [$startDate, $endDate])
+            ->with([
+                'fromStop.terminal',
+                'toStop.terminal',
+                'seats',
+                'passengers',
+                'user',
+                'bookedByUser',
+                'cancelledByUser',
+                'trip.route',
+            ]);
+
+        // Apply filters
+        if ($request->filled('cancelled_by_user_id')) {
+            $query->where('cancelled_by_user_id', $request->cancelled_by_user_id);
+        }
+
+        if ($request->filled('cancelled_by_type')) {
+            $query->where('cancelled_by_type', $request->cancelled_by_type);
+        }
+
+        if ($request->filled('route_id')) {
+            $query->whereHas('trip.route', function ($q) use ($request) {
+                $q->where('id', $request->route_id);
+            });
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+
+        if ($request->filled('is_advance')) {
+            $query->where('is_advance', $request->is_advance === '1');
+        }
+
+        return DataTables::of($query)
+            ->addColumn('booking_number', function (Booking $booking) {
+                return '<span class="badge bg-danger">#'.$booking->booking_number.'</span>';
+            })
+            ->addColumn('created_at', function (Booking $booking) {
+                return $booking->created_at->format('d M Y, H:i');
+            })
+            ->addColumn('cancelled_at', function (Booking $booking) {
+                return $booking->cancelled_at ? $booking->cancelled_at->format('d M Y, H:i') : '-';
+            })
+            ->addColumn('route', function (Booking $booking) {
+                $from = $booking->fromStop?->terminal?->code ?? 'N/A';
+                $to = $booking->toStop?->terminal?->code ?? 'N/A';
+
+                return '<strong>'.$from.' → '.$to.'</strong>';
+            })
+            ->addColumn('passengers', function (Booking $booking) {
+                $passengerNames = $booking->passengers->pluck('name')->join(', ');
+
+                if (empty($passengerNames)) {
+                    return '<span class="text-muted small">No passengers</span>';
+                }
+
+                return '<div class="text-nowrap small">'.$passengerNames.'</div>';
+            })
+            ->addColumn('seats', function (Booking $booking) {
+                $seatNumbers = $booking->seats->pluck('seat_number')->join(', ');
+
+                return '<span class="badge bg-secondary">'.$seatNumbers.'</span>';
+            })
+            ->addColumn('channel', function (Booking $booking) {
+                try {
+                    $channel = ChannelEnum::from($booking->channel ?? '');
+
+                    return '<span class="badge '.$channel->getBadge().'"><i class="'.$channel->getIcon().'"></i> '.$channel->getLabel().'</span>';
+                } catch (\ValueError $e) {
+                    return '<span class="badge bg-secondary">'.($booking->channel ?? 'N/A').'</span>';
+                }
+            })
+            ->addColumn('is_advance', function (Booking $booking) {
+                if ($booking->is_advance) {
+                    return '<span class="badge bg-success"><i class="bx bx-check"></i> Yes</span>';
+                }
+
+                return '<span class="badge bg-secondary"><i class="bx bx-x"></i> No</span>';
+            })
+            ->addColumn('payment_method', function (Booking $booking) {
+                try {
+                    $method = PaymentMethodEnum::from($booking->payment_method ?? '');
+
+                    return '<span class="badge '.$method->getBadge().'"><i class="'.$method->getIcon().'"></i> '.$method->getLabel().'</span>';
+                } catch (\ValueError $e) {
+                    return '<span class="badge bg-secondary">'.ucfirst($booking->payment_method ?? 'Unknown').'</span>';
+                }
+            })
+            ->addColumn('amount', function (Booking $booking) {
+                return '<strong class="text-danger">PKR '.number_format($booking->final_amount, 0).'</strong>';
+            })
+            ->addColumn('cancelled_by', function (Booking $booking) {
+                $cancelledBy = $booking->cancelledByUser?->name ?? 'System';
+                $cancelledByType = ucfirst($booking->cancelled_by_type ?? 'unknown');
+
+                return '<div class="small">
+                    <strong>'.$cancelledBy.'</strong><br>
+                    <span class="badge bg-warning">'.$cancelledByType.'</span>
+                </div>';
+            })
+            ->addColumn('cancellation_reason', function (Booking $booking) {
+                $reason = $booking->cancellation_reason ?? 'No reason provided';
+
+                if (strlen($reason) > 50) {
+                    return '<span class="small" title="'.$reason.'">'.substr($reason, 0, 50).'...</span>';
+                }
+
+                return '<span class="small">'.$reason.'</span>';
+            })
+            ->rawColumns(['booking_number', 'route', 'passengers', 'seats', 'channel', 'is_advance', 'payment_method', 'amount', 'cancelled_by', 'cancellation_reason'])
+            ->make(true);
+    }
+
+    public function exportCancellationReport(Request $request)
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        $validationRules = [
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'route_id' => 'nullable|exists:routes,id',
+        ];
+
+        if ($canViewAllReports) {
+            $validationRules['terminal_id'] = 'required|exists:terminals,id';
+            $validationRules['cancelled_by_user_id'] = 'nullable|exists:users,id';
+        } else {
+            $validationRules['terminal_id'] = 'nullable';
+            $validationRules['cancelled_by_user_id'] = 'nullable';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        if ($canViewAllReports) {
+            $terminalId = $validated['terminal_id'];
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+            $terminalId = $user->terminal_id;
+        }
+
+        $terminal = Terminal::findOrFail($terminalId);
+
+        // Build date range
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+        // Get cancelled bookings with all filters
+        $query = Booking::query()
+            ->whereHas('fromStop', function ($q) use ($terminalId) {
+                $q->where('terminal_id', $terminalId);
+            })
+            ->whereNotNull('cancelled_at')
+            ->whereBetween('cancelled_at', [$startDate, $endDate])
+            ->with([
+                'fromStop.terminal',
+                'toStop.terminal',
+                'seats',
+                'passengers',
+                'user',
+                'bookedByUser',
+                'cancelledByUser',
+                'trip.route',
+            ]);
+
+        // Apply all filters
+        if ($request->filled('cancelled_by_user_id')) {
+            $query->where('cancelled_by_user_id', $request->cancelled_by_user_id);
+        }
+
+        if ($request->filled('cancelled_by_type')) {
+            $query->where('cancelled_by_type', $request->cancelled_by_type);
+        }
+
+        if ($request->filled('route_id')) {
+            $query->whereHas('trip.route', function ($q) use ($request) {
+                $q->where('id', $request->route_id);
+            });
+        }
+
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+
+        if ($request->filled('is_advance')) {
+            $query->where('is_advance', $request->is_advance === '1');
+        }
+
+        $cancelledBookings = $query->get();
+        $stats = $this->calculateCancellationStats($cancelledBookings);
+
+        // Get cancellation reasons
+        $cancellationReasons = $cancelledBookings
+            ->whereNotNull('cancellation_reason')
+            ->groupBy('cancellation_reason')
+            ->map(function ($group) {
+                return [
+                    'reason' => $group->first()->cancellation_reason,
+                    'count' => $group->count(),
+                ];
+            })
+            ->sortByDesc('count')
+            ->values();
+
+        $generalSettings = GeneralSetting::first();
+
+        $data = [
+            'terminal' => $terminal,
+            'cancelledBookings' => $cancelledBookings,
+            'stats' => $stats,
+            'cancellationReasons' => $cancellationReasons,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'generalSettings' => $generalSettings,
+            'filters' => $request->all(),
+        ];
+
+        // TODO: Install barryvdh/laravel-dompdf package for PDF export
+        // $pdf = Pdf::loadView('admin.terminal-reports.export-cancellation-pdf', $data);
+        // $pdf->setPaper('A4', 'landscape');
+        // $filename = 'cancellation-report-'.$terminal->code.'-'.date('Y-m-d').'.pdf';
+        // return $pdf->download($filename);
+
+        // Temporary: Return view for now until PDF package is installed
+        return view('admin.terminal-reports.export-cancellation-pdf', $data);
+    }
+
+    private function calculateCancellationStats($cancelledBookings)
+    {
+        $totalCancellations = $cancelledBookings->count();
+        $totalRefundAmount = $cancelledBookings->sum('final_amount');
+        $totalCancelledSeats = $cancelledBookings->sum(function ($booking) {
+            return $booking->seats->count();
+        });
+        $totalCancelledPassengers = $cancelledBookings->sum('total_passengers');
+
+        // Group by cancelled_by_type
+        $byCancelledType = $cancelledBookings->groupBy('cancelled_by_type')->map(function ($group) {
+            return [
+                'count' => $group->count(),
+                'amount' => $group->sum('final_amount'),
+            ];
+        });
+
+        // Group by payment method
+        $byPaymentMethod = $cancelledBookings->groupBy('payment_method')->map(function ($group) {
+            return [
+                'count' => $group->count(),
+                'amount' => $group->sum('final_amount'),
+            ];
+        });
+
+        return [
+            'total_cancellations' => $totalCancellations,
+            'total_refund_amount' => $totalRefundAmount,
+            'total_cancelled_seats' => $totalCancelledSeats,
+            'total_cancelled_passengers' => $totalCancelledPassengers,
+            'by_cancelled_type' => $byCancelledType,
+            'by_payment_method' => $byPaymentMethod,
         ];
     }
 }

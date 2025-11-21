@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -166,6 +167,21 @@ class User extends Authenticatable
         return $this->announcements()
             ->wherePivot('is_featured', true)
             ->orderByPivot('created_at', 'desc');
+    }
+
+    public function bookings(): HasMany
+    {
+        return $this->hasMany(Booking::class);
+    }
+
+    public function bookedBookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'booked_by_user_id');
+    }
+
+    public function cancelledBookings(): HasMany
+    {
+        return $this->hasMany(Booking::class, 'cancelled_by_user_id');
     }
 
     // =============================
