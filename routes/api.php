@@ -2,9 +2,11 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Customer\BookingController;
+use App\Http\Controllers\Api\Customer\CustomerAuthController;
+use App\Http\Controllers\Api\Customer\CustomerBookingController;
+use App\Http\Controllers\Api\Customer\CustomerProfileController;
 
-/* 
+/*
 |--------------------------------------------------------------------------
 | API Routes
 |--------------------------------------------------------------------------
@@ -19,10 +21,35 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
+Route::prefix('customer')->group(function () {
+    // Auth
+    Route::post('auth/signup', [CustomerAuthController::class, 'signup']);
+    Route::post('auth/login', [CustomerAuthController::class, 'login']);
+
+    // Public trip search & seat selection endpoints
+    Route::get('trips', [CustomerBookingController::class, 'trips']);
+    Route::get('trips/details', [CustomerBookingController::class, 'tripDetails']);
+    Route::get('trips/seat-map', [CustomerBookingController::class, 'tripDetails']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('auth/logout', [CustomerAuthController::class, 'logout']);
+
+        // Profile
+        Route::get('profile', [CustomerProfileController::class, 'show']);
+        Route::put('profile', [CustomerProfileController::class, 'update']);
+        Route::put('profile/password', [CustomerProfileController::class, 'changePassword']);
+
+        // Bookings
+        Route::post('bookings', [CustomerBookingController::class, 'store']);
+        Route::get('bookings', [CustomerBookingController::class, 'history']);
+        Route::post('bookings/{booking}/payment', [CustomerBookingController::class, 'pay']);
+    });
+});
+
 // Public API routes for booking
 Route::get('/routes/{route}/stops', function ($routeId) {
     $route = \App\Models\Route::with('routeStops.terminal.city')->findOrFail($routeId);
-    
+
     return $route->routeStops->map(function ($stop) {
         return [
             'id' => $stop->id,
@@ -39,5 +66,5 @@ Route::get('/routes/{route}/stops', function ($routeId) {
     });
 });
 
-// Get available routes between terminals
-Route::get('/booking/available-routes', [BookingController::class, 'getAvailableRoutes']);
+// Legacy available routes endpoint (aliases trip search)
+Route::get('/booking/available-routes', [CustomerBookingController::class, 'trips']);

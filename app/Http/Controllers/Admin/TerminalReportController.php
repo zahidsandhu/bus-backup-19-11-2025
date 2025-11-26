@@ -19,6 +19,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Spatie\Permission\Models\Role;
 use Yajra\DataTables\Facades\DataTables;
 
 class TerminalReportController extends Controller
@@ -1259,5 +1260,343 @@ class TerminalReportController extends Controller
             'by_cancelled_type' => $byCancelledType,
             'by_payment_method' => $byPaymentMethod,
         ];
+    }
+
+    public function employeeBookingsReport(): View
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        // Get terminals
+        if ($canViewAllReports) {
+            $terminals = Terminal::where('status', TerminalEnum::ACTIVE->value)
+                ->orderBy('name')
+                ->get(['id', 'name', 'code']);
+            $canSelectTerminal = true;
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+
+            $terminals = Terminal::where('id', $user->terminal_id)
+                ->where('status', TerminalEnum::ACTIVE->value)
+                ->get(['id', 'name', 'code']);
+            $canSelectTerminal = false;
+        }
+
+        // Get employees
+        $employeeRole = Role::where('name', 'Employee')->first();
+        if ($canViewAllReports) {
+            $employees = User::whereHas('roles', function ($query) use ($employeeRole) {
+                $query->where('role_id', $employeeRole->id);
+            })
+                ->with('terminal')
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'terminal_id']);
+        } else {
+            $employees = User::whereHas('roles', function ($query) use ($employeeRole) {
+                $query->where('role_id', $employeeRole->id);
+            })
+                ->where('terminal_id', $user->terminal_id)
+                ->with('terminal')
+                ->orderBy('name')
+                ->get(['id', 'name', 'email', 'terminal_id']);
+        }
+
+        $bookingStatuses = BookingStatusEnum::cases();
+        $paymentStatuses = PaymentStatusEnum::cases();
+        $channels = ChannelEnum::cases();
+        $paymentMethods = PaymentMethodEnum::options();
+
+        return view('admin.terminal-reports.employee-bookings-report', [
+            'terminals' => $terminals,
+            'employees' => $employees,
+            'canSelectTerminal' => $canSelectTerminal,
+            'canViewAllReports' => $canViewAllReports,
+            'selectedEmployeeId' => $canViewAllReports ? null : ($user->isEmployee() ? $user->id : null),
+            'bookingStatuses' => $bookingStatuses,
+            'paymentStatuses' => $paymentStatuses,
+            'channels' => $channels,
+            'paymentMethods' => $paymentMethods,
+        ]);
+    }
+
+    public function getEmployeeBookingsData(Request $request): JsonResponse
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        $validationRules = [
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'employee_id' => 'nullable|exists:users,id',
+        ];
+
+        if ($canViewAllReports) {
+            $validationRules['terminal_id'] = 'nullable|exists:terminals,id';
+        } else {
+            $validationRules['terminal_id'] = 'nullable';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        // Get employee role
+        $employeeRole = Role::where('name', 'Employee')->first();
+
+        // Build query for employees
+        $employeeQuery = User::whereHas('roles', function ($query) use ($employeeRole) {
+            $query->where('role_id', $employeeRole->id);
+        });
+
+        if ($canViewAllReports) {
+            if ($request->filled('terminal_id')) {
+                $employeeQuery->where('terminal_id', $validated['terminal_id']);
+            }
+            if ($request->filled('employee_id')) {
+                $employeeQuery->where('id', $validated['employee_id']);
+            }
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+            $employeeQuery->where('terminal_id', $user->terminal_id);
+            if ($request->filled('employee_id') && (int) $request->input('employee_id') !== $user->id) {
+                abort(403, 'You are not allowed to view other employee reports.');
+            }
+        }
+
+        $employees = $employeeQuery->with('terminal')->get();
+
+        // Build date range
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+        // Get bookings for each employee
+        $employeeStats = [];
+        foreach ($employees as $employee) {
+            $bookings = Booking::where('booked_by_user_id', $employee->id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->with([
+                    'trip.route',
+                    'fromStop.terminal',
+                    'toStop.terminal',
+                    'seats',
+                    'passengers',
+                ]);
+
+            // Apply additional filters if provided
+            if ($request->filled('status')) {
+                $bookings->where('status', $request->status);
+            }
+            if ($request->filled('payment_status')) {
+                $bookings->where('payment_status', $request->payment_status);
+            }
+            if ($request->filled('payment_method')) {
+                $bookings->where('payment_method', $request->payment_method);
+            }
+            if ($request->filled('channel')) {
+                $bookings->where('channel', $request->channel);
+            }
+            if ($request->filled('is_advance')) {
+                $bookings->where('is_advance', $request->is_advance);
+            }
+
+            $bookingsCollection = $bookings->get();
+
+            // Calculate daily and monthly stats
+            $dailyStats = $bookingsCollection->groupBy(function ($booking) {
+                return $booking->created_at->format('Y-m-d');
+            })->map(function ($dayBookings) {
+                return [
+                    'date' => $dayBookings->first()->created_at->format('Y-m-d'),
+                    'count' => $dayBookings->count(),
+                    'amount' => $dayBookings->sum('final_amount'),
+                ];
+            })->values();
+
+            $monthlyStats = $bookingsCollection->groupBy(function ($booking) {
+                return $booking->created_at->format('Y-m');
+            })->map(function ($monthBookings) {
+                return [
+                    'month' => $monthBookings->first()->created_at->format('Y-m'),
+                    'count' => $monthBookings->count(),
+                    'amount' => $monthBookings->sum('final_amount'),
+                ];
+            })->values();
+
+            $employeeStats[] = [
+                'employee' => [
+                    'id' => $employee->id,
+                    'name' => $employee->name,
+                    'email' => $employee->email,
+                    'terminal' => $employee->terminal ? [
+                        'id' => $employee->terminal->id,
+                        'name' => $employee->terminal->name,
+                        'code' => $employee->terminal->code,
+                    ] : null,
+                ],
+                'total_bookings' => $bookingsCollection->count(),
+                'total_amount' => $bookingsCollection->sum('final_amount'),
+                'daily_stats' => $dailyStats,
+                'monthly_stats' => $monthlyStats,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'employee_stats' => $employeeStats,
+            'start_date' => $startDate->format('Y-m-d'),
+            'end_date' => $endDate->format('Y-m-d'),
+        ]);
+    }
+
+    public function getEmployeeBookingsTableData(Request $request)
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        $validationRules = [
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'employee_id' => 'nullable|exists:users,id',
+        ];
+
+        if ($canViewAllReports) {
+            $validationRules['terminal_id'] = 'nullable|exists:terminals,id';
+        } else {
+            $validationRules['terminal_id'] = 'nullable';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        // Get employee role
+        $employeeRole = Role::where('name', 'Employee')->first();
+
+        // Build query for bookings - only bookings created by employees
+        $query = Booking::query()
+            ->whereHas('bookedByUser', function ($q) use ($employeeRole) {
+                $q->whereHas('roles', function ($roleQuery) use ($employeeRole) {
+                    $roleQuery->where('role_id', $employeeRole->id);
+                });
+            })
+            ->with([
+                'trip.route',
+                'fromStop.terminal',
+                'toStop.terminal',
+                'seats',
+                'passengers',
+                'bookedByUser.terminal',
+            ]);
+
+        // Build date range
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+        $query->whereBetween('created_at', [$startDate, $endDate]);
+
+        // Apply filters
+        if ($canViewAllReports) {
+            if ($request->filled('terminal_id')) {
+                $query->where('terminal_id', $validated['terminal_id']);
+            }
+            if ($request->filled('employee_id')) {
+                $query->where('booked_by_user_id', $validated['employee_id']);
+            }
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+            $query->where('terminal_id', $user->terminal_id);
+            if ($request->filled('employee_id') && (int) $request->input('employee_id') !== $user->id) {
+                abort(403, 'You are not allowed to view other employee reports.');
+            }
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+        if ($request->filled('is_advance')) {
+            $query->where('is_advance', $request->is_advance);
+        }
+
+        return DataTables::eloquent($query)
+            ->addColumn('booking_number_formatted', function ($booking) {
+                return '#' . str_pad($booking->booking_number, 6, '0', STR_PAD_LEFT);
+            })
+            ->addColumn('date_time', function ($booking) {
+                return $booking->created_at->format('d M Y h:i A');
+            })
+            ->addColumn('route_info', function ($booking) {
+                if ($booking->trip && $booking->trip->route) {
+                    return $booking->trip->route->name . ($booking->trip->route->code ? ' (' . $booking->trip->route->code . ')' : '');
+                }
+                return 'N/A';
+            })
+            ->addColumn('from_to', function ($booking) {
+                $from = $booking->fromStop && $booking->fromStop->terminal ? $booking->fromStop->terminal->name : 'N/A';
+                $to = $booking->toStop && $booking->toStop->terminal ? $booking->toStop->terminal->name : 'N/A';
+                return $from . ' → ' . $to;
+            })
+            ->addColumn('passengers_count', function ($booking) {
+                return $booking->total_passengers ?? $booking->passengers->count();
+            })
+            ->addColumn('seats_info', function ($booking) {
+                return $booking->seats->pluck('seat_number')->join(', ') ?: 'N/A';
+            })
+            ->addColumn('employee_info', function ($booking) {
+                if ($booking->bookedByUser) {
+                    $terminal = $booking->bookedByUser->terminal;
+                    $terminalInfo = $terminal ? $terminal->name . ($terminal->code ? ' (' . $terminal->code . ')' : '') : 'No Terminal';
+                    return '<div>
+                        <div class="fw-bold">' . e($booking->bookedByUser->name) . '</div>
+                        <small class="text-muted">' . e($terminalInfo) . '</small>
+                    </div>';
+                }
+                return 'N/A';
+            })
+            ->addColumn('status_badge', function ($booking) {
+                $statusEnum = BookingStatusEnum::tryFrom($booking->status);
+                $statusLabel = $statusEnum ? $statusEnum->getLabel() : $booking->status;
+                $statusColor = match ($booking->status) {
+                    'confirmed' => 'success',
+                    'cancelled' => 'danger',
+                    'hold' => 'warning',
+                    default => 'secondary',
+                };
+                return '<span class="badge bg-' . $statusColor . '">' . e($statusLabel) . '</span>';
+            })
+            ->addColumn('payment_status_badge', function ($booking) {
+                $paymentStatusEnum = PaymentStatusEnum::tryFrom($booking->payment_status);
+                $paymentStatusLabel = $paymentStatusEnum ? $paymentStatusEnum->getLabel() : $booking->payment_status;
+                $paymentStatusColor = match ($booking->payment_status) {
+                    'paid' => 'success',
+                    'pending' => 'warning',
+                    'refunded' => 'info',
+                    default => 'secondary',
+                };
+                return '<span class="badge bg-' . $paymentStatusColor . '">' . e($paymentStatusLabel) . '</span>';
+            })
+            ->addColumn('amount_formatted', function ($booking) {
+                return 'PKR ' . number_format($booking->final_amount, 2);
+            })
+            ->editColumn('is_advance', function ($booking) {
+                return $booking->is_advance ? '<span class="badge bg-info">Yes</span>' : '<span class="badge bg-secondary">No</span>';
+            })
+            ->rawColumns(['employee_info', 'status_badge', 'payment_status_badge', 'is_advance'])
+            ->make(true);
     }
 }

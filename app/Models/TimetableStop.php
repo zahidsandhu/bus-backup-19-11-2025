@@ -19,12 +19,14 @@ class TimetableStop extends Model
         'arrival_time',
         'departure_time',
         'is_active',
+        'online_time_table',
     ];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'online_time_table' => 'boolean',
         ];
     }
 

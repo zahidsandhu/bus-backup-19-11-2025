@@ -299,6 +299,11 @@ Route::middleware(['auth', CheckUserStatus::class])->group(function () {
         Route::get('/terminal-reports/cancellation-bookings-data', [TerminalReportController::class, 'getCancellationBookingsData'])->can('view terminal reports')->name('terminal-reports.cancellation-bookings-data');
         Route::get('/terminal-reports/cancellation-export', [TerminalReportController::class, 'exportCancellationReport'])->can('view terminal reports')->name('terminal-reports.cancellation-export');
 
+        // Employee Bookings Reports Routes
+        Route::get('/terminal-reports/employee-bookings', [TerminalReportController::class, 'employeeBookingsReport'])->can('view terminal reports')->name('terminal-reports.employee-bookings');
+        Route::get('/terminal-reports/employee-bookings-data', [TerminalReportController::class, 'getEmployeeBookingsData'])->can('view terminal reports')->name('terminal-reports.employee-bookings-data');
+        Route::get('/terminal-reports/employee-bookings-table-data', [TerminalReportController::class, 'getEmployeeBookingsTableData'])->can('view terminal reports')->name('terminal-reports.employee-bookings-table-data');
+
         // Sales Reports Routes (Admin)
         Route::get('/reports', [AdminReportController::class, 'index'])->can('view bookings')->name('reports.index');
         Route::get('/reports/sales', [AdminReportController::class, 'sales'])->can('view bookings')->name('reports.sales');

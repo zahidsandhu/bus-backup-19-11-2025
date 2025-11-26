@@ -173,6 +173,8 @@ class TimetableController extends Controller
                     'start_departure_time' => $startDepartureTimeFormatted,
                     'end_arrival_time' => $endArrivalTimeFormatted,
                     'is_active' => true,
+                    'online_time_table' => $request->online_time_table ?? true,
+
                 ]);
 
                 foreach ($timetableData['stops'] as $stopIndex => $stopData) {
@@ -199,6 +201,7 @@ class TimetableController extends Controller
                         'arrival_time' => $arrivalTime, // null for empty first stop arrival time
                         'departure_time' => $departureTime,
                         'is_active' => true,
+
                     ]);
                 }
             }
