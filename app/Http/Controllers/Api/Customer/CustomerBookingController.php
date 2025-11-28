@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Helpers\HolidayHelper;
 use App\Enums\PlatformEnum;
 use App\Http\Resources\Customer\BookingResource;
 use App\Models\Booking;
@@ -43,6 +44,13 @@ class CustomerBookingController extends Controller
         ]);
 
         try {
+            if (HolidayHelper::isHoliday($validated['date'])) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Bookings are closed during the holiday period.',
+                ], 400);
+            }
+
             if ($validated['from_terminal_id'] === $validated['to_terminal_id']) {
                 throw new \Exception('From and To terminals must be different');
             }
@@ -167,6 +175,10 @@ class CustomerBookingController extends Controller
 
             if ($tripFromStop->sequence >= $tripToStop->sequence) {
                 throw new \Exception('Invalid segment selection');
+            }
+
+            if (HolidayHelper::isHoliday($trip->departure_date)) {
+                throw new \Exception('Bookings are closed during the holiday period.');
             }
 
             if ($tripFromStop->departure_at) {
@@ -303,6 +315,12 @@ class CustomerBookingController extends Controller
                 throw new \Exception('Invalid segment selection');
             }
 
+            if (HolidayHelper::isHoliday($trip->departure_date)) {
+                throw ValidationException::withMessages([
+                    'date' => 'Bookings are closed during the holiday period.',
+                ]);
+            }
+
             // Check 2-hour booking restriction for online customers
             if ($tripFromStop->departure_at) {
                 $departureTime = $tripFromStop->departure_at;
@@ -428,6 +446,13 @@ class CustomerBookingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Booking has expired. Please create a new booking.',
+            ], 400);
+        }
+
+        if (HolidayHelper::isHoliday($booking->trip->departure_date)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Bookings are closed during the holiday period.',
             ], 400);
         }
 

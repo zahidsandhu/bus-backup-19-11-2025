@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\HolidayHelper;
 use App\Models\Booking;
 use App\Services\BookingService;
 use Illuminate\Contracts\View\View;
@@ -16,11 +17,16 @@ class PaymentController extends Controller
         private BookingService $bookingService
     ) {}
 
-    public function show(Request $request, Booking $booking): View
+    public function show(Request $request, Booking $booking)
     {
         // Verify booking belongs to authenticated user
         if ($booking->user_id !== Auth::id()) {
             abort(403, 'Unauthorized access to this booking.');
+        }
+
+        if (HolidayHelper::isHoliday($booking->trip->departure_date)) {
+            return view('frontend.payment.expired', compact('booking'))
+                ->with('error', 'Bookings are closed during the holiday period.');
         }
 
         // Check if booking is expired
@@ -51,6 +57,12 @@ class PaymentController extends Controller
 
             return redirect()->route('frontend.bookings.payment', $booking)
                 ->with('error', 'Booking has expired. Please create a new booking.');
+        }
+
+        if (HolidayHelper::isHoliday($booking->trip->departure_date)) {
+            return redirect()->route('frontend.bookings.payment', $booking)
+                ->with('error', 'Bookings are closed during the holiday period.')
+                ->withInput();
         }
 
         $validated = $request->validate([

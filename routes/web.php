@@ -16,6 +16,7 @@ use App\Http\Controllers\Admin\EnquiryController;
 use App\Http\Controllers\Admin\FacilityController;
 use App\Http\Controllers\Admin\FareController;
 use App\Http\Controllers\Admin\GeneralSettingController;
+use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
 use App\Http\Controllers\Admin\Rolecontroller;
@@ -285,6 +286,14 @@ Route::middleware(['auth', CheckUserStatus::class])->group(function () {
         Route::put('/advance-booking', [AdvanceBookingController::class, 'update'])->can('edit general settings')->name('advance-booking.update');
         Route::patch('/advance-booking/toggle-status', [AdvanceBookingController::class, 'toggleStatus'])->can('edit general settings')->name('advance-booking.toggle-status');
         Route::get('/advance-booking/settings', [AdvanceBookingController::class, 'getSettings'])->can('view general settings')->name('advance-booking.settings');
+
+        // Holidays Management Routes
+        Route::get('/holidays', [HolidayController::class, 'index'])->can('edit general settings')->name('holidays.index');
+        Route::get('/holidays/create', [HolidayController::class, 'create'])->can('edit general settings')->name('holidays.create');
+        Route::post('/holidays', [HolidayController::class, 'store'])->can('edit general settings')->name('holidays.store');
+        Route::get('/holidays/{holiday}/edit', [HolidayController::class, 'edit'])->can('edit general settings')->name('holidays.edit');
+        Route::put('/holidays/{holiday}', [HolidayController::class, 'update'])->can('edit general settings')->name('holidays.update');
+        Route::delete('/holidays/{holiday}', [HolidayController::class, 'destroy'])->can('edit general settings')->name('holidays.destroy');
 
         // Terminal Reports Routes
         Route::get('/terminal-reports', [TerminalReportController::class, 'index'])->can('view terminal reports')->name('terminal-reports.index');

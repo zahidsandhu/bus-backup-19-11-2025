@@ -1,0 +1,183 @@
+{
+  "info": {
+    "name": "Customer Mobile API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Collection for Customer Mobile API module"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://your-domain/api"
+    },
+    {
+      "key": "token",
+      "value": "<your-token>"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth & Profile",
+      "item": [
+        {
+          "name": "Customer Sign-Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/auth/signup", "host": ["{{base_url}}"], "path": ["customer","auth","signup"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"StrongPass123!\",\n  \"password_confirmation\": \"StrongPass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Customer Sign-In",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/auth/login", "host": ["{{base_url}}"], "path": ["customer","auth","login"]},
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"john.doe@example.com\",\n  \"password\": \"StrongPass123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Customer Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/auth/logout", "host": ["{{base_url}}"], "path": ["customer","auth","logout"]}
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/profile", "host": ["{{base_url}}"], "path": ["customer","profile"]}
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/profile", "host": ["{{base_url}}"], "path": ["customer","profile"]},
+            "body": {"mode":"raw","raw":"{\n  \"name\": \"John Doe\",\n  \"email\": \"john.doe@example.com\"\n}"}
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/profile/password", "host": ["{{base_url}}"], "path": ["customer","profile","password"]},
+            "body": {"mode":"raw","raw":"{\n  \"current_password\": \"OldPass123!\",\n  \"password\": \"NewStrongPass123!\",\n  \"password_confirmation\": \"NewStrongPass123!\"\n}"}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips & Booking",
+      "item": [
+        {
+          "name": "Search Trips",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/customer/trips?from_terminal_id=1&to_terminal_id=5&date=2025-12-01",
+              "host": ["{{base_url}}"],
+              "path": ["customer","trips"],
+              "query": [
+                {"key": "from_terminal_id", "value": "1"},
+                {"key": "to_terminal_id", "value": "5"},
+                {"key": "date", "value": "2025-12-01"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "Trip Details / Seat Map",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {
+              "raw": "{{base_url}}/customer/trips/details?trip_id=101&from_terminal_id=1&to_terminal_id=5&platform=android",
+              "host": ["{{base_url}}"],
+              "path": ["customer","trips","details"],
+              "query": [
+                {"key": "trip_id", "value": "101"},
+                {"key": "from_terminal_id", "value": "1"},
+                {"key": "to_terminal_id", "value": "5"},
+                {"key": "platform", "value": "android"}
+              ]
+            }
+          }
+        },
+        {
+          "name": "New Booking (Hold)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/bookings", "host": ["{{base_url}}"], "path": ["customer","bookings"]},
+            "body": {"mode":"raw","raw":"{\n  \"trip_id\": 101,\n  \"from_terminal_id\": 1,\n  \"to_terminal_id\": 5,\n  \"seat_numbers\": [1],\n  \"seats_data\": [{\"seat_number\":1,\"gender\":\"male\"}],\n  \"passengers\": [{\"name\":\"John Doe\",\"gender\":\"male\"}],\n  \"total_fare\": 1500,\n  \"discount_amount\": 0,\n  \"tax_amount\": 0,\n  \"final_amount\": 1500\n}"}
+          }
+        },
+        {
+          "name": "Booking History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/bookings", "host": ["{{base_url}}"], "path": ["customer","bookings"]}
+          }
+        },
+        {
+          "name": "Confirm Booking Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Accept", "value": "application/json"}
+            ],
+            "url": {"raw": "{{base_url}}/customer/bookings/500/payment", "host": ["{{base_url}}"], "path": ["customer","bookings","500","payment"]},
+            "body": {"mode":"raw","raw":"{\n  \"payment_method\": \"easypaisa\",\n  \"transaction_id\": \"TXN-987654321\"\n}"}
+          }
+        }
+      ]
+    }
+  ]
+}

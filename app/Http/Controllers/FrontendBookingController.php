@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\HolidayHelper;
 use App\Models\Fare;
 use App\Models\RouteStop;
 use App\Models\Terminal;
@@ -27,7 +28,7 @@ class FrontendBookingController extends Controller
         private DiscountService $discountService
     ) {}
 
-    public function showTrips(Request $request): View
+    public function showTrips(Request $request)
     {
         $validated = $request->validate([
             'from_terminal_id' => 'required|exists:terminals,id',
@@ -35,6 +36,14 @@ class FrontendBookingController extends Controller
             'date' => 'required|date_format:Y-m-d|after_or_equal:today',
             'passengers' => 'nullable|integer|min:1|max:10',
         ]);
+
+        if (HolidayHelper::isHoliday($validated['date'])) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'date' => 'Bookings are closed during the holiday period.',
+                ]);
+        }
 
         $fromTerminal = Terminal::with('city')->findOrFail($validated['from_terminal_id']);
         $toTerminal = Terminal::with('city')->findOrFail($validated['to_terminal_id']);
@@ -58,6 +67,12 @@ class FrontendBookingController extends Controller
         ]);
 
         try {
+            if (HolidayHelper::isHoliday($validated['date'])) {
+                return response()->json([
+                    'error' => 'Bookings are closed during the holiday period.',
+                ], 400);
+            }
+
             if ($validated['from_terminal_id'] === $validated['to_terminal_id']) {
                 throw new \Exception('From and To terminals must be different');
             }
@@ -153,7 +168,7 @@ class FrontendBookingController extends Controller
         }
     }
 
-    public function selectSeats(Request $request): View
+    public function selectSeats(Request $request)
     {
         $validated = $request->validate([
             'trip_id' => 'required|exists:trips,id',
@@ -162,6 +177,14 @@ class FrontendBookingController extends Controller
             'date' => 'required|date_format:Y-m-d',
             'passengers' => 'required|integer|min:1|max:10',
         ]);
+
+        if (HolidayHelper::isHoliday($validated['date'])) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'date' => 'Bookings are closed during the holiday period.',
+                ]);
+        }
 
         return view('frontend.bookings.seats', [
             'trip_id' => $validated['trip_id'],
@@ -192,6 +215,10 @@ class FrontendBookingController extends Controller
 
             if ($tripFromStop->sequence >= $tripToStop->sequence) {
                 throw new \Exception('Invalid segment selection');
+            }
+
+            if (HolidayHelper::isHoliday($trip->departure_date)) {
+                throw new \Exception('Bookings are closed during the holiday period.');
             }
 
             // Check 2-hour booking restriction for online customers
@@ -332,6 +359,12 @@ class FrontendBookingController extends Controller
 
             if ($tripFromStop->sequence >= $tripToStop->sequence) {
                 throw new \Exception('Invalid segment selection');
+            }
+
+            if (HolidayHelper::isHoliday($trip->departure_date)) {
+                throw ValidationException::withMessages([
+                    'date' => 'Bookings are closed during the holiday period.',
+                ]);
             }
 
             // Check 2-hour booking restriction for online customers

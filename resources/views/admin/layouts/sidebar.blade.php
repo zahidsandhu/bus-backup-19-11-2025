@@ -429,6 +429,15 @@
                       <div class="menu-title" style="font-size: 0.875rem; font-weight: 500;">Advance Booking</div>
                   </a>
               </li>
+              <li>
+                  <a href="{{ route('admin.holidays.index') }}"
+                      style="padding: 0.75rem 1rem; font-size: 0.875rem;">
+                      <div class="parent-icon" style="width: 20px; height: 20px; font-size: 1rem;"><i
+                              class='bx bx-calendar-x'></i>
+                      </div>
+                      <div class="menu-title" style="font-size: 0.875rem; font-weight: 500;">Holidays</div>
+                  </a>
+              </li>
           @endcan
 
           @can('view enquiries')
