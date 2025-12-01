@@ -2,6 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Customer\TerminalController;
 use App\Http\Controllers\Api\Customer\CustomerAuthController;
 use App\Http\Controllers\Api\Customer\CustomerBookingController;
 use App\Http\Controllers\Api\Customer\CustomerProfileController;
@@ -20,7 +21,7 @@ use App\Http\Controllers\Api\Customer\CustomerProfileController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
-
+Route::get('general-info', [TerminalController::class, 'general_info_admin']);
 Route::prefix('customer')->group(function () {
     // Auth
     Route::post('auth/signup', [CustomerAuthController::class, 'signup']);
@@ -30,6 +31,10 @@ Route::prefix('customer')->group(function () {
     Route::get('trips', [CustomerBookingController::class, 'trips']);
     Route::get('trips/details', [CustomerBookingController::class, 'tripDetails']);
     Route::get('trips/seat-map', [CustomerBookingController::class, 'tripDetails']);
+    Route::get('cities', [TerminalController::class, 'cities']);
+    Route::get('terminals', [TerminalController::class, 'terminals']);
+    Route::get('terminals/{city_id}', [TerminalController::class, 'terminalsByCity']);
+
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/logout', [CustomerAuthController::class, 'logout']);
