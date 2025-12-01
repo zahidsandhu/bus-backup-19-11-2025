@@ -40,6 +40,15 @@ class CustomerAuthController extends Controller
 
         event(new Registered($user));
 
+        $profileData = $request->only(['phone', 'cnic', 'gender', 'date_of_birth', 'address']);
+
+        $user->profile()->updateOrCreate(
+            ['user_id' => $user->id],
+            $profileData
+        );
+
+        $user->load('profile');
+
         $token = $user->createToken('mobile-app')->plainTextToken;
 
         return response()->json([
