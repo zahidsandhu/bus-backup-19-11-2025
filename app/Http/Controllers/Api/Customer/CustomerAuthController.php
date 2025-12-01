@@ -33,20 +33,15 @@ class CustomerAuthController extends Controller
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => Hash::make($validated['password']),
-            'phone' => $validated['phone'],
-            'cnic' => $validated['cnic'],
-            'gender' => $validated['gender'],
         ]);
 
         event(new Registered($user));
 
         $profileData = $request->only(['phone', 'cnic', 'gender', 'date_of_birth', 'address']);
-
         $user->profile()->updateOrCreate(
             ['user_id' => $user->id],
             $profileData
         );
-
         $user->load('profile');
 
         $token = $user->createToken('mobile-app')->plainTextToken;
