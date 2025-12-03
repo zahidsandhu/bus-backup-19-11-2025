@@ -18,6 +18,7 @@ use App\Models\Route;
 use App\Models\RouteStop;
 use App\Models\Terminal;
 use App\Models\Timetable;
+use App\Models\BookingPassenger;
 use App\Models\TimetableStop;
 use App\Models\Trip;
 use App\Models\TripStop;
@@ -811,6 +812,67 @@ class BookingConsole extends Component
         ];
     }
 
+    public function updatedPassengers($value, $key): void
+    {
+        if (! is_string($key) || ! str_contains($key, '.')) {
+            return;
+        }
+
+        [$index, $field] = explode('.', $key, 2);
+
+        if ($field !== 'cnic') {
+            return;
+        }
+
+        $index = (int) $index;
+
+        if (! isset($this->passengers[$index])) {
+            return;
+        }
+
+        $cnic = trim((string) $value);
+
+        if ($cnic === '') {
+            $this->resetErrorBag('passengers.'.$index.'.cnic');
+
+            return;
+        }
+
+        if (! preg_match('/^[0-9]{5}-[0-9]{7}-[0-9]{1}$/', $cnic)) {
+            $this->addError('passengers.'.$index.'.cnic', 'CNIC format is invalid. Use 12345-9999999-1.');
+
+            return;
+        }
+
+        $this->resetErrorBag('passengers.'.$index.'.cnic');
+
+        $existingPassenger = BookingPassenger::query()
+            ->where('cnic', $cnic)
+            ->latest('id')
+            ->first();
+
+        if (! $existingPassenger) {
+            return;
+        }
+
+        $gender = null;
+
+        if ($existingPassenger->gender) {
+            if ($existingPassenger->gender instanceof \App\Enums\GenderEnum) {
+                $gender = $existingPassenger->gender->value;
+            } elseif (is_string($existingPassenger->gender)) {
+                $gender = $existingPassenger->gender;
+            }
+        }
+
+        $this->passengers[$index]['cnic'] = $cnic;
+        $this->passengers[$index]['name'] = $existingPassenger->name ?? '';
+        $this->passengers[$index]['age'] = $existingPassenger->age ?? '';
+        $this->passengers[$index]['gender'] = $gender ?? '';
+        $this->passengers[$index]['phone'] = $existingPassenger->phone ?? '';
+        $this->passengers[$index]['email'] = $existingPassenger->email ?? '';
+    }
+
     public function removePassenger($index): void
     {
         if (isset($this->passengers[$index])) {
@@ -949,7 +1011,7 @@ class BookingConsole extends Component
             'passengers.*.name' => 'required|string|max:100',
             'passengers.*.age' => 'required|integer|min:1|max:120',
             'passengers.*.gender' => 'required|in:male,female',
-            'passengers.*.cnic' => 'nullable|string|max:20',
+            'passengers.*.cnic' => "nullable|string|regex:/^[0-9]{5}-[0-9]{7}-[0-9]{1}$/|max:15",
             'passengers.*.phone' => 'nullable|string|max:20',
             'passengers.*.email' => 'nullable|email|max:100',
         ];

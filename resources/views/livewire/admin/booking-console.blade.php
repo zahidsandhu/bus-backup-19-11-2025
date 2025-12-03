@@ -308,6 +308,29 @@
                                             </div>
                                             <div class="card-body">
                                                 <div class="row g-2">
+                                                    <div class="col-lg-4 col-md-12">
+                                                        <label class="form-label small">CNIC <span
+                                                                class="text-danger">*</span></label>
+                                                        <input type="text"
+                                                            class="form-control form-control-sm @error("passengers.{$index}.cnic") is-invalid border-danger @enderror"
+                                                            wire:model.blur="passengers.{{ $index }}.cnic"
+                                                            id="cnic-{{ $index }}"
+                                                            placeholder="12345-9999999-1"
+                                                            pattern="^[0-9]{5}-[0-9]{7}-[0-9]{1}$" maxlength="15"
+                                                            inputmode="numeric"
+                                                            onkeypress="return (event.charCode >= 48 && event.charCode <= 57 || event.charCode === 45)"
+                                                            oninput="
+                                                                    let v = this.value.replace(/[^0-9]/g, '');
+                                                                    if (v.length > 5 && v.length <= 12) v = v.slice(0,5) + '-' + v.slice(5);
+                                                                    else if (v.length > 12) v = v.slice(0,5) + '-' + v.slice(5,12) + '-' + v.slice(12,13);
+                                                                    this.value = v.slice(0,15);
+                                                                "
+                                                            required @error("passengers.{$index}.cnic") autofocus
+                                                            @enderror>
+                                                        @error("passengers.{$index}.cnic")
+                                                            <small class="text-danger d-block">{{ $message }}</small>
+                                                        @enderror
+                                                    </div>
                                                     <div class="col-lg-6 col-md-12">
                                                         <label class="form-label small">Name <span
                                                                 class="text-danger">*</span></label>
@@ -348,29 +371,7 @@
                                                             <small class="text-danger d-block">{{ $message }}</small>
                                                         @enderror
                                                     </div>
-                                                    <div class="col-lg-4 col-md-12">
-                                                        <label class="form-label small">CNIC <span
-                                                                class="text-danger">*</span></label>
-                                                        <input type="text"
-                                                            class="form-control form-control-sm @error("passengers.{$index}.cnic") is-invalid border-danger @enderror"
-                                                            wire:model.blur="passengers.{{ $index }}.cnic"
-                                                            id="cnic-{{ $index }}"
-                                                            placeholder="12345-9999999-1"
-                                                            pattern="^[0-9]{5}-[0-9]{7}-[0-9]{1}$" maxlength="15"
-                                                            inputmode="numeric"
-                                                            onkeypress="return (event.charCode >= 48 && event.charCode <= 57 || event.charCode === 45)"
-                                                            oninput="
-                                                                    let v = this.value.replace(/[^0-9]/g, '');
-                                                                    if (v.length > 5 && v.length <= 12) v = v.slice(0,5) + '-' + v.slice(5);
-                                                                    else if (v.length > 12) v = v.slice(0,5) + '-' + v.slice(5,12) + '-' + v.slice(12,13);
-                                                                    this.value = v.slice(0,15);
-                                                                "
-                                                            required @error("passengers.{$index}.cnic") autofocus
-                                                            @enderror>
-                                                        @error("passengers.{$index}.cnic")
-                                                            <small class="text-danger d-block">{{ $message }}</small>
-                                                        @enderror
-                                                    </div>
+
                                                     <div class="col-lg-4 col-md-6">
                                                         <label class="form-label small">Phone</label>
                                                         <input type="tel"

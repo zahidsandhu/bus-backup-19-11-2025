@@ -61,6 +61,7 @@ class CustomerBookingController extends Controller
 
             $timetableStops = TimetableStop::where('terminal_id', $validated['from_terminal_id'])
                 ->where('is_active', true)
+                ->where('online_time_table', true)
                 ->with('timetable.route')
                 ->get();
 
