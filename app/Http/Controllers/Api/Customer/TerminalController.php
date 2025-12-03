@@ -52,7 +52,7 @@ class TerminalController extends Controller
                 ->where('status', CityEnum::ACTIVE->value)
                 ->get();
 
-            $sortedCities = $cities->sortBy('name')->map(function ($city) {
+            $sortedCities = $cities->map(function ($city) {
                 return [
                     'id' => $city->id,
                     'name' => $city->name,
@@ -63,7 +63,7 @@ class TerminalController extends Controller
             return response()->json([
                 'success' => true,
                 'data' => [
-                    'cities' => $sortedCities,
+                    'cities' => $cities,
                 ],
                 'message' => 'Cities fetched successfully',
             ]);
