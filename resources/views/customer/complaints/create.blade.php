@@ -1,53 +1,91 @@
-@extends('layouts.app')
+@extends('frontend.layouts.app')
+
+@section('title', 'Submit Complaint')
 
 @section('content')
-    <div class="max-w-2xl mx-auto py-8">
-        <h1 class="text-2xl font-semibold mb-4">Submit Complaint</h1>
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
 
-        @if ($errors->any())
-            <div class="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm">
-                <ul class="list-disc pl-5 space-y-1">
-                    @foreach ($errors->all() as $error)
-                        <li>{{ $error }}</li>
-                    @endforeach
-                </ul>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="mb-0">Submit Complaint</h3>
+                    <a href="{{ route('customer.complaints.index') }}" class="btn btn-outline-secondary btn-sm">
+                        Back to Complaints
+                    </a>
+                </div>
+
+                @if ($errors->any())
+                    <div class="alert alert-danger small">
+                        <ul class="mb-0 ps-3">
+                            @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                @endif
+
+                <div class="card">
+                    <div class="card-body">
+                        <form action="{{ route('customer.complaints.store') }}" method="POST"
+                              enctype="multipart/form-data">
+                            @csrf
+
+                            <div class="mb-3">
+                                <label class="form-label small mb-1">Title</label>
+                                <input type="text"
+                                       name="title"
+                                       value="{{ old('title') }}"
+                                       class="form-control form-control-sm @error('title') is-invalid @enderror"
+                                       placeholder="Brief summary of your complaint">
+                                @error('title')
+                                <div class="invalid-feedback small">
+                                    {{ $message }}
+                                </div>
+                                @enderror
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small mb-1">Message</label>
+                                <textarea
+                                    name="message"
+                                    rows="4"
+                                    class="form-control form-control-sm @error('message') is-invalid @enderror"
+                                    placeholder="Describe the issue in detail">{{ old('message') }}</textarea>
+                                @error('message')
+                                <div class="invalid-feedback small">
+                                    {{ $message }}
+                                </div>
+                                @enderror
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label small mb-1">Attachment (optional)</label>
+                                <input type="file"
+                                       name="attachment"
+                                       class="form-control form-control-sm @error('attachment') is-invalid @enderror">
+                                <div class="form-text">Maximum size 2MB. You can attach a screenshot or document if needed.</div>
+                                @error('attachment')
+                                <div class="invalid-feedback small">
+                                    {{ $message }}
+                                </div>
+                                @enderror
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="{{ route('customer.complaints.index') }}"
+                                   class="btn btn-outline-secondary btn-sm">
+                                    Cancel
+                                </a>
+                                <button type="submit" class="btn btn-primary btn-sm">
+                                    Submit Complaint
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
             </div>
-        @endif
-
-        <form action="{{ route('customer.complaints.store') }}" method="POST" enctype="multipart/form-data" class="space-y-4">
-            @csrf
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                <input type="text" name="title" value="{{ old('title') }}"
-                       class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Message</label>
-                <textarea name="message" rows="5"
-                          class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 text-sm">{{ old('message') }}</textarea>
-            </div>
-
-            <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Attachment (optional)</label>
-                <input type="file" name="attachment"
-                       class="block w-full text-sm text-gray-700">
-                <p class="mt-1 text-xs text-gray-500">Maximum size 2MB.</p>
-            </div>
-
-            <div class="flex items-center justify-end gap-2">
-                <a href="{{ route('customer.complaints.index') }}"
-                   class="px-4 py-2 text-sm rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50">
-                    Cancel
-                </a>
-                <button type="submit"
-                        class="px-4 py-2 text-sm rounded-md bg-blue-600 text-white hover:bg-blue-700">
-                    Submit
-                </button>
-            </div>
-        </form>
+        </div>
     </div>
 @endsection
-
 
