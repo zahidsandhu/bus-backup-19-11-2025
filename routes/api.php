@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Customer\TerminalController;
+use App\Http\Controllers\Api\Customer\BannerController;
 use App\Http\Controllers\Api\Customer\CustomerAuthController;
 use App\Http\Controllers\Api\Customer\CustomerBookingController;
 use App\Http\Controllers\Api\Customer\CustomerProfileController;
@@ -31,6 +32,7 @@ Route::prefix('customer')->group(function () {
     Route::get('trips', [CustomerBookingController::class, 'trips']);
     Route::get('trips/details', [CustomerBookingController::class, 'tripDetails']);
     Route::get('trips/seat-map', [CustomerBookingController::class, 'tripDetails']);
+    Route::get('banners', [BannerController::class, 'index']);
     Route::get('cities', [TerminalController::class, 'cities']);
     Route::get('terminals', [TerminalController::class, 'terminals']);
     Route::get('terminals/{city_id}', [TerminalController::class, 'terminalsByCity']);
