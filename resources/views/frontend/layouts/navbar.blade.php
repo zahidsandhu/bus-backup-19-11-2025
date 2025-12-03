@@ -40,6 +40,13 @@
                                     <i class="bi bi-ticket-perforated me-2"></i>My Bookings
                                 </a>
                             </li>
+                            @if (Auth::user()?->hasRole('Customer'))
+                                <li>
+                                    <a class="dropdown-item" href="{{ route('customer.complaints.index') }}">
+                                        <i class="bi bi-exclamation-circle me-2"></i>Complaints
+                                    </a>
+                                </li>
+                            @endif
                             <li>
                                 <a class="dropdown-item" href="{{ route('2fa.show') }}">
                                     <i class="bi bi-shield-check me-2"></i>Two-Factor Authentication

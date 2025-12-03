@@ -19,6 +19,7 @@ use App\Http\Controllers\Admin\GeneralSettingController;
 use App\Http\Controllers\Admin\HolidayController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\ReportController as AdminReportController;
+use App\Http\Controllers\Admin\ComplaintController as AdminComplaintController;
 use App\Http\Controllers\Admin\Rolecontroller;
 use App\Http\Controllers\Admin\RouteController;
 use App\Http\Controllers\Admin\RouteStopController;
@@ -30,6 +31,8 @@ use App\Http\Controllers\FrontendBookingController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TwoFactorController;
+use App\Http\Controllers\Customer\ComplaintController as CustomerComplaintController;
+use App\Http\Controllers\Employee\ComplaintController as EmployeeComplaintController;
 use App\Http\Middleware\CheckUserStatus;
 use Illuminate\Support\Facades\Route;
 
@@ -78,6 +81,26 @@ Route::middleware(['auth', CheckUserStatus::class])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/bookings', [ProfileController::class, 'bookings'])->name('profile.bookings');
+
+    // Customer Complaints
+    Route::prefix('customer/complaints')
+        ->name('customer.complaints.')
+        ->group(function () {
+            Route::get('/', [CustomerComplaintController::class, 'index'])->name('index');
+            Route::get('/create', [CustomerComplaintController::class, 'create'])->name('create');
+            Route::post('/', [CustomerComplaintController::class, 'store'])->name('store');
+            Route::get('/{complaint}', [CustomerComplaintController::class, 'show'])->name('show');
+        });
+
+    // Employee Complaints
+    Route::prefix('employee/complaints')
+        ->name('employee.complaints.')
+        ->middleware('can:Employee')
+        ->group(function () {
+            Route::get('/', [EmployeeComplaintController::class, 'index'])->name('index');
+            Route::get('/{complaint}', [EmployeeComplaintController::class, 'show'])->name('show');
+            Route::put('/{complaint}', [EmployeeComplaintController::class, 'update'])->name('update');
+        });
 
     Route::get('/user/two-factor', [TwoFactorController::class, 'show'])->name('2fa.show');
     Route::post('/user/two-factor/enable', [TwoFactorController::class, 'enable'])->name('2fa.enable');
@@ -316,6 +339,12 @@ Route::middleware(['auth', CheckUserStatus::class])->group(function () {
         // Sales Reports Routes (Admin)
         Route::get('/reports', [AdminReportController::class, 'index'])->can('view bookings')->name('reports.index');
         Route::get('/reports/sales', [AdminReportController::class, 'sales'])->can('view bookings')->name('reports.sales');
+
+        // Complaints
+        Route::get('/complaints', [AdminComplaintController::class, 'index'])->name('complaints.index');
+        Route::get('/complaints/{complaint}', [AdminComplaintController::class, 'show'])->name('complaints.show');
+        Route::put('/complaints/{complaint}', [AdminComplaintController::class, 'update'])->name('complaints.update');
+        Route::delete('/complaints/{complaint}', [AdminComplaintController::class, 'destroy'])->name('complaints.destroy');
 
         // Discount Routes
         Route::get('/discounts', [DiscountController::class, 'index'])->can('view discounts')->name('discounts.index');

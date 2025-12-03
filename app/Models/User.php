@@ -185,6 +185,16 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class, 'cancelled_by_user_id');
     }
 
+    public function complaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class);
+    }
+
+    public function assignedComplaints(): HasMany
+    {
+        return $this->hasMany(Complaint::class, 'employee_id');
+    }
+
     // =============================
     // Helper Methods
     // =============================

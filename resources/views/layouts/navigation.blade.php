@@ -23,6 +23,14 @@
                     </x-nav-link>
                 </div>
 
+                @if (Auth::user()?->hasRole('Customer'))
+                    <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                        <x-nav-link :href="route('customer.complaints.index')" :active="request()->routeIs('customer.complaints.*')">
+                            {{ __('Complaints') }}
+                        </x-nav-link>
+                    </div>
+                @endif
+
 
                 @can('access admin panel')
                     <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
@@ -107,6 +115,12 @@
             <x-responsive-nav-link :href="route('profile.edit')" :active="request()->routeIs('profile.*')">
                 {{ __('Profile') }}
             </x-responsive-nav-link>
+
+            @if (Auth::user()?->hasRole('Customer'))
+                <x-responsive-nav-link :href="route('customer.complaints.index')" :active="request()->routeIs('customer.complaints.*')">
+                    {{ __('Complaints') }}
+                </x-responsive-nav-link>
+            @endif
 
             @can('access admin panel')
                 <x-responsive-nav-link :href="route('admin.dashboard')" :active="request()->routeIs('admin.dashboard')">

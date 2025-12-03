@@ -440,19 +440,41 @@
               </li>
           @endcan
 
-          @can('view enquiries')
-              <li class="menu-label"
-                  style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.5rem 1rem; color: #6c757d;">
-                  Customer Support</li>
-              <li>
-                  <a href="{{ route('admin.enquiries.index') }}" style="padding: 0.75rem 1rem; font-size: 0.875rem;">
-                      <div class="parent-icon" style="width: 20px; height: 20px; font-size: 1rem;"><i
-                              class='bx bx-message-dots'></i>
-                      </div>
-                      <div class="menu-title" style="font-size: 0.875rem; font-weight: 500;">Customer Enquiries</div>
-                  </a>
-              </li>
-          @endcan
+         @can('view enquiries')
+             <li class="menu-label"
+                 style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.5rem 1rem; color: #6c757d;">
+                 Customer Support</li>
+             <li>
+                 <a href="{{ route('admin.enquiries.index') }}" style="padding: 0.75rem 1rem; font-size: 0.875rem;">
+                     <div class="parent-icon" style="width: 20px; height: 20px; font-size: 1rem;"><i
+                             class='bx bx-message-dots'></i>
+                     </div>
+                     <div class="menu-title" style="font-size: 0.875rem; font-weight: 500;">Customer Enquiries</div>
+                 </a>
+             </li>
+             <li>
+                 <a href="{{ route('admin.complaints.index') }}" style="padding: 0.75rem 1rem; font-size: 0.875rem;">
+                     <div class="parent-icon" style="width: 20px; height: 20px; font-size: 1rem;"><i
+                             class='bx bx-error-circle'></i>
+                     </div>
+                     <div class="menu-title" style="font-size: 0.875rem; font-weight: 500;">Customer Complaints</div>
+                 </a>
+             </li>
+         @endcan
+
+         @if ($authUser?->isEmployee())
+             <li class="menu-label"
+                 style="font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; padding: 0.5rem 1rem; color: #6c757d;">
+                 Complaints</li>
+             <li>
+                 <a href="{{ route('employee.complaints.index') }}" style="padding: 0.75rem 1rem; font-size: 0.875rem;">
+                     <div class="parent-icon" style="width: 20px; height: 20px; font-size: 1rem;"><i
+                             class='bx bx-error-circle'></i>
+                     </div>
+                     <div class="menu-title" style="font-size: 0.875rem; font-weight: 500;">My Complaints</div>
+                 </a>
+             </li>
+         @endif
       </ul>
       <!--end navigation-->
   </div>
