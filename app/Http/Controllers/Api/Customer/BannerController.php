@@ -19,7 +19,6 @@ class BannerController extends Controller
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'token' => ['required'],
             'type' => ['nullable', 'string', Rule::in(BannerTypeEnum::getTypes())],
         ]);
 
