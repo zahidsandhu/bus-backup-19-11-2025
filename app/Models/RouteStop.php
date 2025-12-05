@@ -36,6 +36,6 @@ class RouteStop extends Model
 
     public function terminal()
     {
-        return $this->belongsTo(Terminal::class);
+        return $this->belongsTo(Terminal::class, 'terminal_id');
     }
 }

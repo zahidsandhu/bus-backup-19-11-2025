@@ -2,8 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Customer\TerminalController;
+use App\Http\Controllers\Api\Customer\RouteController;
 use App\Http\Controllers\Api\Customer\BannerController;
+use App\Http\Controllers\Api\Customer\TerminalController;
 use App\Http\Controllers\Api\Customer\CustomerAuthController;
 use App\Http\Controllers\Api\Customer\CustomerBookingController;
 use App\Http\Controllers\Api\Customer\CustomerProfileController;
@@ -36,6 +37,7 @@ Route::prefix('customer')->group(function () {
     Route::get('cities', [TerminalController::class, 'cities']);
     Route::get('terminals', [TerminalController::class, 'terminals']);
     Route::get('terminals/{city_id}', [TerminalController::class, 'terminalsByCity']);
+    Route::post('/routes/search', [RouteController::class, 'search']);
 
 
     Route::middleware('auth:sanctum')->group(function () {
