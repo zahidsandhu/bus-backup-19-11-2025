@@ -25,7 +25,6 @@ class BookingPassenger extends Model
     protected function casts(): array
     {
         return [
-            'age' => 'integer',
             'gender' => GenderEnum::class,
         ];
     }

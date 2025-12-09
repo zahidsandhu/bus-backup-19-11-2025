@@ -185,6 +185,14 @@ class BookingService
         });
     }
 
+    /**
+     * Customer-facing booking creation wrapper.
+     */
+    public function createBooking(array $data, ?User $actor = null): Booking
+    {
+        return $this->create($data, $actor);
+    }
+
     public function confirmPayment(Booking $booking, string $method, float $amount): void
     {
         if (in_array($booking->status, ['expired', 'cancelled'])) {

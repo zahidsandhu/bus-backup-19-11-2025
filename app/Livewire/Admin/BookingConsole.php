@@ -90,6 +90,8 @@ class BookingConsole extends Component
 
     public $fareError = null;
 
+    public bool $amountManuallyChanged = false;
+
     // Booking Form
     public $bookingType = 'counter';
 
@@ -124,6 +126,9 @@ class BookingConsole extends Component
     public $showTripContent = false;
 
     public $lockedSeats = [];
+
+    // Post Trip Report
+    public $isPosted = 0;
 
     // Bus Assignment Modal
     public $showBusAssignmentModal = false;
@@ -519,7 +524,7 @@ class BookingConsole extends Component
                 $tripFactory = app(TripFactoryService::class);
                 $trip = $tripFactory->createFromTimetable($timetable->id, $this->travelDate);
             }
-
+            $this->isPosted = $trip->is_posted;
             $trip->load(['stops.terminal:id,name,code', 'originStop', 'bus.busLayout']);
 
             $routeStops = RouteStop::where('route_id', $route->id)
@@ -762,26 +767,33 @@ class BookingConsole extends Component
 
         // Recalculate fare when seats change
         $this->calculateFinal();
+        $this->syncPassengers();
     }
 
     public function setSeatGender($seatNumber, $gender): void
     {
-        if (isset($this->selectedSeats[$seatNumber])) {
-            $this->selectedSeats[$seatNumber]['gender'] = $gender;
-
-            // Auto-fill first passenger's gender if not set
-            if (! empty($this->passengers) && empty($this->passengers[0]['gender'])) {
-                $this->passengers[0]['gender'] = $gender;
+        // Ensure the seat exists in selectedSeats
+        if (!isset($this->selectedSeats[$seatNumber])) {
+            return;
+        }
+        $this->selectedSeats[$seatNumber]['gender'] = $gender;
+        $this->syncPassengers();
+        // Find matching passenger and set gender
+        foreach ($this->passengers as $index => $passenger) {
+            if (isset($passenger['seat_number']) && $passenger['seat_number'] == $seatNumber) {
+                $this->passengers[$index]['gender'] = $gender;
+                break;
             }
         }
-        $this->pendingSeat = null;
 
+        $this->pendingSeat = null;
         // Dispatch event to close modal
         $this->dispatch('gender-selected');
     }
 
     public function addPassenger(): void
     {
+        if ($this->isPosted == 1) return;
         // Limit to number of selected seats
         $selectedSeatCount = count($this->selectedSeats);
         $currentPassengerCount = count($this->passengers);
@@ -813,6 +825,7 @@ class BookingConsole extends Component
 
     public function updatedPassengers($value, $key): void
     {
+        if ($this->isPosted == 1) return;
         if (! is_string($key) || ! str_contains($key, '.')) {
             return;
         }
@@ -874,6 +887,7 @@ class BookingConsole extends Component
 
     public function removePassenger($index): void
     {
+        if ($this->isPosted == 1) return;
         if (isset($this->passengers[$index])) {
             // Don't allow removing if it's the only passenger and seats are selected
             if ($this->passengers[$index]['is_required'] && count($this->passengers) === 1 && count($this->selectedSeats) > 0) {
@@ -907,6 +921,7 @@ class BookingConsole extends Component
 
     public function updatedAmountReceived(): void
     {
+        $this->amountManuallyChanged = true;
         $this->calculateReturn();
     }
 
@@ -959,6 +974,9 @@ class BookingConsole extends Component
         if ($this->finalAmount < 0) {
             $this->finalAmount = 0;
         }
+        if (!$this->amountManuallyChanged) {
+            $this->amountReceived = $this->finalAmount;
+        }
     }
 
     public function updatedTaxAmount(): void
@@ -1008,18 +1026,14 @@ class BookingConsole extends Component
         $validationRules = [
             'passengers' => 'required|array|min:1|max:'.$selectedSeatCount,
             'passengers.*.name' => 'required|string|max:100',
-            'passengers.*.age' => 'required|integer|min:1|max:120',
             'passengers.*.gender' => 'required|in:male,female',
             'passengers.*.cnic' => "nullable|string|regex:/^[0-9]{5}-[0-9]{7}-[0-9]{1}$/|max:15",
-            'passengers.*.phone' => 'nullable|string|max:20',
-            'passengers.*.email' => 'nullable|email|max:100',
         ];
 
         $validationMessages = [
             'passengers.min' => 'Please provide at least one passenger information',
             'passengers.max' => 'You can add up to '.$selectedSeatCount.' passenger(s) for '.$selectedSeatCount.' selected seat(s)',
             'passengers.*.name.required' => 'Passenger name is required',
-            'passengers.*.age.required' => 'Passenger age is required',
             'passengers.*.gender.required' => 'Passenger gender is required',
         ];
 
@@ -1215,6 +1229,7 @@ class BookingConsole extends Component
 
     private function updatePassengerForms(): void
     {
+        if ($this->isPosted == 1) return;
         // If no seats selected, clear all passengers
         if (count($this->selectedSeats) === 0) {
             $this->passengers = [];
@@ -2004,6 +2019,66 @@ class BookingConsole extends Component
         return 'An unexpected error occurred. Please try again or contact support if the problem persists.';
     }
 
+    private function syncPassengers(): void
+    {
+        $selectedSeatNumbers = array_values(array_keys($this->selectedSeats));
+        $requiredCount = count($selectedSeatNumbers);
+        $currentCount = count($this->passengers);
+
+        // Ensure passenger rows have seat_number before any access happens
+        foreach ($this->passengers as $i => $p) {
+            if (!isset($p['seat_number'])) {
+                $this->passengers[$i]['seat_number'] = $selectedSeatNumbers[$i] ?? null;
+            }
+        }
+
+        // If seats removed → trim passengers
+        if ($currentCount > $requiredCount) {
+            $this->passengers = array_values(array_slice($this->passengers, 0, $requiredCount));
+            return;
+        }
+
+        // Add missing passengers
+        while (count($this->passengers) < $requiredCount) {
+            $seatNumber = $selectedSeatNumbers[count($this->passengers)];
+            $seatGender = $this->selectedSeats[$seatNumber]['gender'] ?? '';
+
+            $this->passengers[] = [
+                'id'      => ++$this->passengerCounter,
+                'name'    => '',
+                'age'     => '',
+                'gender'  => $seatGender,   // 🟢 AUTO-SET GENDER
+                'cnic'    => '',
+                'phone'   => '',
+                'email'   => '',
+                'is_required' => false,
+                'seat_number' => $seatNumber // optional but useful
+            ];
+        }
+        // Sync passenger gender with seat gender
+        foreach ($this->passengers as $i => $passenger) {
+            $sn = $passenger['seat_number'];
+            if ($sn && isset($this->selectedSeats[$sn]['gender'])) {
+                $this->passengers[$i]['gender'] = $this->selectedSeats[$sn]['gender'];
+            }
+        }
+    }
+    public function postTrip(): void
+    {
+        // Prevent double posting
+        if ($this->isPosted) {
+            return;
+        }
+        // Update in DB
+        Trip::where('id', $this->tripId)
+            ->update(['is_posted' => 1]);
+
+        // Freeze UI
+        $this->isPosted = 1;
+
+        // Optional: show toast
+        $this->dispatch('show-success', message: 'Trip has been posted successfully. All actions are now locked.');
+    }
     public function render()
     {
         $user = Auth::user();
@@ -2020,4 +2095,5 @@ class BookingConsole extends Component
             'maxDate' => $maxDate->format('Y-m-d'),
         ]);
     }
+
 }

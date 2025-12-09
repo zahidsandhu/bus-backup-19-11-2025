@@ -131,7 +131,7 @@
 
         <!-- Trip Content (shown when trip loaded) -->
         @if ($showTripContent && $tripLoaded)
-            <div class="row g-3 booking-console-row">
+            <div @if($isPosted == 1) style="pointer-events:none;opacity:0.5" @endif class="row g-3 booking-console-row">
                 <!-- Left Column: Seat Map (3 columns) -->
                 <div class="col-xxl-3 col-xl-6 col-lg-6 col-md-6">
                     <div class="card shadow-sm h-100 border-0">
@@ -265,7 +265,7 @@
                                         <span class="badge bg-info">{{ count($selectedSeats) }} seat(s)</span>
                                         @if (count($selectedSeats) > 0 && count($passengers) < count($selectedSeats))
                                             <button type="button" class="btn btn-outline-primary btn-sm"
-                                                wire:click="addPassenger"
+                                                wire:click="addPassenger" @disabled($isPosted == 1)
                                                 title="Add another passenger (max {{ count($selectedSeats) }})">
                                                 <i class="fas fa-plus-circle"></i> Add Passenger
                                             </button>
@@ -298,7 +298,7 @@
                                                     @if (!$passenger['is_required'])
                                                         <button type="button"
                                                             class="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                                                            wire:click="removePassenger({{ $index }})"
+                                                            wire:click="removePassenger({{ $index }})" @disabled($isPosted == 1)
                                                             title="Remove this passenger">
                                                             <i class="bx bx-trash" style="font-size: 1rem;"></i>
                                                             <span>Remove</span>
@@ -326,7 +326,7 @@
                                                                     this.value = v.slice(0,15);
                                                                 "
                                                             required @error("passengers.{$index}.cnic") autofocus
-                                                            @enderror>
+                                                            @disabled($isPosted == 1) @enderror>
                                                         @error("passengers.{$index}.cnic")
                                                             <small class="text-danger d-block">{{ $message }}</small>
                                                         @enderror
@@ -338,23 +338,18 @@
                                                             class="form-control form-control-sm @error("passengers.{$index}.name") is-invalid border-danger @enderror"
                                                             wire:model="passengers.{{ $index }}.name"
                                                             placeholder="Full Name" maxlength="100"
-                                                            @error("passengers.{$index}.name") autofocus @enderror>
+                                                            @error("passengers.{$index}.name") autofocus @disabled($isPosted == 1) @enderror>
                                                         @error("passengers.{$index}.name")
                                                             <small class="text-danger d-block">{{ $message }}</small>
                                                         @enderror
                                                     </div>
                                                     <div class="col-lg-3 col-md-6">
-                                                        <label class="form-label small">Age <span
-                                                                class="text-danger">*</span></label>
+                                                        <label class="form-label small">Age</label>
                                                         <input type="number"
-                                                            class="form-control form-control-sm @error("passengers.{$index}.age") is-invalid border-danger @enderror"
+                                                            class="form-control form-control-sm"
                                                             wire:model="passengers.{{ $index }}.age"
-                                                            min="1" max="120" maxlength="3"
                                                             placeholder="Age"
-                                                            @error("passengers.{$index}.age") autofocus @enderror>
-                                                        @error("passengers.{$index}.age")
-                                                            <small class="text-danger d-block">{{ $message }}</small>
-                                                        @enderror
+                                                            @error("passengers.{$index}.age") autofocus @disabled($isPosted == 1) @enderror>
                                                     </div>
                                                     <div class="col-lg-3 col-md-6">
                                                         <label class="form-label small">Gender <span
@@ -362,7 +357,7 @@
                                                         <select
                                                             class="form-select form-select-sm @error("passengers.{$index}.gender") is-invalid border-danger @enderror"
                                                             wire:model="passengers.{{ $index }}.gender"
-                                                            @error("passengers.{$index}.gender") autofocus @enderror>
+                                                            @error("passengers.{$index}.gender") autofocus @disabled($isPosted == 1) @enderror>
                                                             <option value="">Select</option>
                                                             <option value="male">Male</option>
                                                             <option value="female">Female</option>
@@ -381,7 +376,7 @@
                                                             pattern="^0[0-9]{10}$" maxlength="11" inputmode="numeric"
                                                             onkeypress="return (event.charCode >= 48 && event.charCode <= 57)"
                                                             oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 11)"
-                                                            @error("passengers.{$index}.phone") autofocus @enderror>
+                                                            @error("passengers.{$index}.phone") autofocus @disabled($isPosted == 1) @enderror>
                                                         @error("passengers.{$index}.phone")
                                                             <small class="text-danger d-block">{{ $message }}</small>
                                                         @enderror
@@ -390,7 +385,7 @@
                                                         <label class="form-label small">Email</label>
                                                         <input type="email" class="form-control form-control-sm"
                                                             wire:model="passengers.{{ $index }}.email"
-                                                            placeholder="email@example.com" maxlength="100">
+                                                            placeholder="email@example.com" maxlength="100" @disabled($isPosted == 1)>
                                                         @error("passengers.{$index}.email")
                                                             <small class="text-danger">{{ $message }}</small>
                                                         @enderror
@@ -532,7 +527,7 @@
                                     <div class="row g-2">
                                         <div class="col-lg-6 col-md-12 mb-2">
                                             <label class="form-label small fw-bold">Booking Type</label>
-                                            <select class="form-select form-select-sm" wire:model.live="bookingType"
+                                            <select class="form-select form-select-sm" wire:model.live="bookingType" @disabled($isPosted == 1)
                                                 wire:loading.attr="disabled">
                                                 <option value="counter"
                                                     {{ $bookingType === 'counter' ? 'selected' : '' }}>🏪 Counter
@@ -552,7 +547,7 @@
                                             <div class="col-lg-6 col-md-12 mb-2">
                                                 <label class="form-label small fw-bold">Payment Method</label>
                                                 <select class="form-select form-select-sm"
-                                                    wire:model.live="paymentMethod" wire:loading.attr="disabled">
+                                                    wire:model.live="paymentMethod" wire:loading.attr="disabled" @disabled($isPosted == 1)>
                                                     @foreach ($paymentMethods as $method)
                                                         @if ($method['value'] !== 'other')
                                                             <option value="{{ $method['value'] }}">
@@ -582,7 +577,7 @@
                                             <div class="mb-2">
                                                 <label class="form-label small">Transaction ID</label>
                                                 <input type="text" class="form-control form-control-sm"
-                                                    wire:model="transactionId" placeholder="TXN123456789"
+                                                    wire:model="transactionId" placeholder="TXN123456789" @disabled($isPosted == 1)
                                                     maxlength="100">
                                             </div>
                                         @endif
@@ -604,7 +599,7 @@
                                                 <input type="number"
                                                     class="form-control form-control-sm fw-bold @error('amountReceived') is-invalid border-danger @enderror"
                                                     wire:model.live.debounce.500ms="amountReceived"
-                                                    wire:loading.attr="disabled" id="amountReceived" min="0.01"
+                                                    wire:loading.attr="disabled" id="amountReceived" min="0.01" @disabled($isPosted == 1)
                                                     step="0.01" placeholder="0.00" required>
                                                 @error('amountReceived')
                                                     <small class="text-danger d-block">{{ $message }}</small>
@@ -683,7 +678,7 @@
                             <div class="mb-2">
                                 <label class="form-label small fw-bold"><i class="fas fa-sticky-note"></i>
                                     Notes</label>
-                                <textarea class="form-control form-control-sm" wire:model="notes" {{-- wire:loading.attr="disabled" --}} rows="2"
+                                <textarea class="form-control form-control-sm" wire:model="notes" {{-- wire:loading.attr="disabled" --}} rows="2" @disabled($isPosted == 1)
                                     maxlength="500" placeholder="Optional notes..."></textarea>
                                 <div wire:loading wire:target="notes"
                                     class="spinner-border spinner-border-sm text-primary mt-1" role="status">
@@ -724,7 +719,7 @@
                                 </div>
                             @endif
 
-                            <button class="btn btn-success w-100 fw-bold py-2 small" wire:click="confirmBooking"
+                            <button class="btn btn-success w-100 fw-bold py-2 small" wire:click="confirmBooking" @disabled($isPosted == 1)
                                 wire:loading.attr="disabled" @if (!$canConfirmBooking) disabled @endif
                                 @if (!$canConfirmBooking && $isCounterBooking && $isCashPayment) title="Payment incomplete - Cannot confirm booking" @endif>
                                 <span wire:loading.remove>
@@ -756,16 +751,24 @@
                                         <button type="button"
                                             class="btn btn-sm btn-primary shadow-sm d-flex align-items-center"
                                             onclick="window.printPassengerList && window.printPassengerList()"
+                                            title="This action will print the post trip report with complete passenger list and financial summary"  wire:click="postTrip"
+                                            @disabled($isPosted == 1)>
+                                            <i class="bx bx-printer me-1"></i>
+                                            <span>Post Trip Report</span>
+                                        </button>
+                                        <button type="button"
+                                            class="btn btn-sm btn-primary shadow-sm d-flex align-items-center"
+                                            onclick="window.printPassengerList && window.printPassengerList()"
                                             title="Print Head Office Report with complete passenger list and financial summary">
                                             <i class="bx bx-printer me-1"></i>
-                                            <span>Head Office Report</span>
+                                            <span>Print / Print Head Office Report</span>
                                         </button>
                                         <button type="button"
                                             class="btn btn-sm btn-success shadow-sm d-flex align-items-center"
                                             onclick="window.printVoucher && window.printVoucher()"
                                             title="Print Motorway Police Voucher">
                                             <i class="bx bx-file-blank me-1"></i>
-                                            <span>Motorway Police Voucher</span>
+                                            <span>Print / Print Motorway Police Voucher</span>
                                         </button>
                                     </div>
                                 @endif

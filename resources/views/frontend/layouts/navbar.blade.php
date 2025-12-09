@@ -12,7 +12,11 @@
                 <li class="nav-item"><a class="nav-link" href="{{ route('services') }}">Our Services</a></li>
                 @auth
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ route('bookings') }}">Book your Ticket</a>
+                        <a class="nav-link" href="{{ route('customer.book.search') }}">Book your Ticket</a>
+                    </li>
+                @else
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('frontend.bookings.trips') }}">Book your Ticket</a>
                     </li>
                 @endauth
                 <li class="nav-item"><a class="nav-link" href="{{ route('about-us') }}">About us</a></li>

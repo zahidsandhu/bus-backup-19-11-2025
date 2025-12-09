@@ -34,6 +34,7 @@ use App\Http\Controllers\TwoFactorController;
 use App\Http\Controllers\Customer\ComplaintController as CustomerComplaintController;
 use App\Http\Controllers\Employee\ComplaintController as EmployeeComplaintController;
 use App\Http\Middleware\CheckUserStatus;
+use App\Models\Trip;
 use Illuminate\Support\Facades\Route;
 
 // use App\Http\Controllers\Customer\DashboardController as CustomerDashboardController;
@@ -81,6 +82,18 @@ Route::middleware(['auth', CheckUserStatus::class])->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     Route::get('/profile/bookings', [ProfileController::class, 'bookings'])->name('profile.bookings');
+
+    // Customer Live Booking Console (legacy)
+    Route::get('/customer/booking', fn () => view('frontend.bookings.customer-console'))->name('customer.booking');
+    Route::get('/customer/booking/confirm', fn () => view('frontend.bookings.customer-console'))->name('customer.booking.confirm');
+
+    // New customer booking flow
+    Route::prefix('customer/book')->name('customer.book.')->group(function () {
+        Route::get('/', fn () => view('frontend.bookings.customer-book-search'))->name('search');
+        Route::get('/results', fn () => view('frontend.bookings.customer-book-results'))->name('results');
+        Route::get('/seat-select/{trip}', fn (Trip $trip) => view('frontend.bookings.customer-seat-select', compact('trip')))->name('seat-select');
+        Route::get('/confirm', fn () => view('frontend.bookings.customer-booking-confirm'))->name('confirm');
+    });
 
     // Customer Complaints
     Route::prefix('customer/complaints')
