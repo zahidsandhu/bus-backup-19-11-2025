@@ -417,7 +417,7 @@ class BookingConsole extends Component
                 $fullDeparture = Carbon::parse($selectedDate->format('Y-m-d').' '.$ts->departure_time);
 
                 // Only include departures greater than or equal to the current moment
-                if ($fullDeparture->greaterThanOrEqualTo($now)) {
+                // if ($fullDeparture->greaterThanOrEqualTo($now)) {
                     $timetableStops[] = [
                         'id' => $ts->id,
                         'timetable_id' => $ts->timetable_id,
@@ -427,10 +427,9 @@ class BookingConsole extends Component
                         'route_name' => $ts->timetable->route->name,
                         'full_departure' => $fullDeparture->toDateTimeString(),
                     ];
-                }
+                // }
             }
         }
-
         $this->departureTimes = collect($timetableStops)
             ->sortBy('full_departure')
             ->values()
