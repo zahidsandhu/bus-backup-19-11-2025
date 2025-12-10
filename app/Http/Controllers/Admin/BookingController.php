@@ -354,15 +354,21 @@ class BookingController extends Controller
 
         // Get active (non-cancelled) seats
         $activeSeats = $booking->seats()->whereNull('cancelled_at')->get();
+        // Calculate per seat fare and total fare
+        // Assuming each seat has a 'fare' field
+        $seatFares = $activeSeats->pluck('fare'); // Collection of fares
+        $totalFare = $seatFares->sum(); // Total fare
         $passengers = $booking->passengers;
-
         // If there are seats, generate one ticket per seat
         if ($activeSeats->count() > 0) {
             return view('admin.bookings.tickets.print-multiple', [
                 'booking' => $booking,
                 'ticketType' => $type,
                 'seats' => $activeSeats,
+                'seatingMap' => $activeSeats,
                 'passengers' => $passengers,
+                'seatFares' => $seatFares, // per seat fare
+                'totalFare' => $totalFare, // sum of all seats fare
             ]);
         }
 
@@ -2106,7 +2112,7 @@ class BookingController extends Controller
         ]);
     }
 
-    public function printHeadOfficeReport(Trip $trip): View
+    public function printHeadOfficeReport(Trip $trip, Request $request): View
     {
         $this->authorize('view bookings');
 
@@ -2118,10 +2124,10 @@ class BookingController extends Controller
             'expenses.fromTerminal',
             'expenses.toTerminal',
         ]);
-
         // Get confirmed bookings for this trip
         $bookings = Booking::where('trip_id', $trip->id)
             ->where('status', 'confirmed')
+            ->where('terminal_id', $request->from_terminal_id)
             ->with([
                 'seats' => function ($query) {
                     $query->whereNull('cancelled_at');

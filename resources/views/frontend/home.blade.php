@@ -120,7 +120,7 @@
                                         <select class="form-select" name="from_terminal_id" id="from_terminal_id" required>
                                             <option value="" selected disabled>Select Terminal</option>
                                             @foreach ($terminals as $terminal)
-                                                <option value="{{ $terminal->id }}">{{ $terminal->name }} ({{ $terminal->city->name }})</option>
+                                                <option value="{{ $terminal->id }}">{{ @$terminal->name }} ({{ @$terminal->city->name }})</option>
                                             @endforeach
                                         </select>
                                     </div>
@@ -530,7 +530,7 @@
             $('#from_terminal_id').on('change', function() {
                 const fromTerminalId = $(this).val();
                 const toSelect = $('#to_terminal_id');
-                
+
                 // Reset To Terminal
                 toSelect.html('<option value="" selected disabled>Select Destination</option>');
                 toSelect.prop('disabled', true);
@@ -550,16 +550,16 @@
                     },
                     success: function(response) {
                         const toSelect = $('#to_terminal_id');
-                        
+
                         if (response.route_stops && response.route_stops.length > 0) {
                             toSelect.html('<option value="" selected disabled>Select Destination</option>');
-                            
+
                             response.route_stops.forEach(function(stop) {
                                 toSelect.append(
                                     `<option value="${stop.terminal_id}">${stop.terminal.name} (${stop.terminal.code})</option>`
                                 );
                             });
-                            
+
                             toSelect.prop('disabled', false);
                         } else {
                             toSelect.html('<option value="" selected disabled>No destinations available</option>');
@@ -574,7 +574,7 @@
                     error: function(xhr) {
                         const toSelect = $('#to_terminal_id');
                         toSelect.html('<option value="" selected disabled>Error loading destinations</option>');
-                        
+
                         Swal.fire({
                             icon: 'error',
                             title: 'Failed to Load Destinations',
@@ -590,7 +590,7 @@
                 const fromTerminalId = $('#from_terminal_id').val();
                 const toTerminalId = $('#to_terminal_id').val();
                 const date = $('#travel_date').val();
-                
+
                 // Basic validation
                 if (!fromTerminalId || !toTerminalId || !date) {
                     e.preventDefault();

@@ -32,7 +32,6 @@ class DashboardController extends Controller
         $terminals = Terminal::where('status', TerminalEnum::ACTIVE->value)
             ->with('city')
             ->get();
-
         $generalSettings = GeneralSetting::first();
         $minDate = Carbon::today()->format('Y-m-d');
         $maxDate = $minDate;

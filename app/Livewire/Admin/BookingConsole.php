@@ -767,26 +767,20 @@ class BookingConsole extends Component
 
         // Recalculate fare when seats change
         $this->calculateFinal();
-        $this->syncPassengers();
     }
 
     public function setSeatGender($seatNumber, $gender): void
     {
-        // Ensure the seat exists in selectedSeats
-        if (!isset($this->selectedSeats[$seatNumber])) {
-            return;
-        }
-        $this->selectedSeats[$seatNumber]['gender'] = $gender;
-        $this->syncPassengers();
-        // Find matching passenger and set gender
-        foreach ($this->passengers as $index => $passenger) {
-            if (isset($passenger['seat_number']) && $passenger['seat_number'] == $seatNumber) {
-                $this->passengers[$index]['gender'] = $gender;
-                break;
+        if (isset($this->selectedSeats[$seatNumber])) {
+            $this->selectedSeats[$seatNumber]['gender'] = $gender;
+
+            // Auto-fill first passenger's gender if not set
+            if (! empty($this->passengers) && empty($this->passengers[0]['gender'])) {
+                $this->passengers[0]['gender'] = $gender;
             }
         }
-
         $this->pendingSeat = null;
+
         // Dispatch event to close modal
         $this->dispatch('gender-selected');
     }

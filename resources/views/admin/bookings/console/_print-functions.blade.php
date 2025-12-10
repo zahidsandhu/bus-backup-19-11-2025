@@ -104,7 +104,7 @@ function printBooking(bookingId, ticketType = null) {
         window.printVoucher = function() {
             // Get trip data from Livewire component
             const tripData = $wire.get('tripDataForJs') || null;
-            
+
             if (!tripData || !tripData.id) {
                 Swal.fire({
                     icon: 'error',
@@ -148,7 +148,8 @@ function printBooking(bookingId, ticketType = null) {
         window.printPassengerList = function() {
             // Get trip data from Livewire component
             const tripData = $wire.get('tripDataForJs') || null;
-            
+            const fromTerminalId = $wire.get('fromTerminalId') || null;
+            const toTerminalId = $wire.get('toTerminalId') || null;
             if (!tripData || !tripData.id) {
                 Swal.fire({
                     icon: 'error',
@@ -174,7 +175,7 @@ function printBooking(bookingId, ticketType = null) {
             }
 
             // Open the head office report route
-            const reportUrl = `/admin/trips/${tripData.id}/head-office-report`;
+            const reportUrl = `/admin/trips/${tripData.id}/head-office-report?from_terminal_id=${fromTerminalId}&to_terminal_id=${toTerminalId}`;
             const printWindow = window.open(reportUrl, '_blank');
 
             if (!printWindow) {

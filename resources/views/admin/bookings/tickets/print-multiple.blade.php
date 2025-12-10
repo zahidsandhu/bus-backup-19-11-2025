@@ -236,113 +236,104 @@
         <i class="fas fa-print"></i> Print All Tickets ({{ $seats->count() }})
     </button>
 
-    @foreach($seats as $index => $seat)
-        @php
-            $settings = \App\Models\GeneralSetting::first();
-            $fromTripStop = $booking->trip->stops->firstWhere('terminal_id', $booking->fromStop->terminal_id);
-            $toTripStop = $booking->trip->stops->firstWhere('terminal_id', $booking->toStop->terminal_id);
-            $departureDateTime = $fromTripStop?->departure_at ?? $booking->trip->departure_datetime;
-            $departureDate = $departureDateTime ? $departureDateTime->format('d-m-Y') : 'N/A';
-            $departureTime = $departureDateTime ? $departureDateTime->format('h:i A') : 'N/A';
-            $departureDateShort = $departureDateTime ? $departureDateTime->format('d/m/Y') : 'N/A';
-            
-            // Get passenger for this seat
-            // If there's only one passenger, use that passenger's info for all tickets
-            // Otherwise, match passenger to seat by index
-            if ($passengers->count() === 1) {
-                $passenger = $passengers->first();
-            } else {
-                $passenger = $passengers->get($index);
-            }
-            
-            $bus = $booking->trip->bus;
-            $busName = $bus->name ?? 'N/A';
-            $busRegistration = $bus->registration_number ?? '';
-            $busCode = $booking->fromStop->terminal->code ?? '';
-            $routeCode = $busRegistration && $busCode ? $busRegistration . ' ' . $busCode : ($busRegistration ?: ($busCode ?: 'N/A'));
-            $fromTerminalName = strtoupper($booking->fromStop->terminal->name ?? 'N/A');
-            $toTerminalName = strtoupper($booking->toStop->terminal->name ?? 'N/A');
-            $fromTerminalCode = strtoupper($booking->fromStop->terminal->code ?? '');
-            $toTerminalCode = strtoupper($booking->toStop->terminal->code ?? '');
-            $routeDisplay = $fromTerminalCode . '-' . $toTerminalCode . ' ' . $departureTime;
-            $bookedByUser = $booking->bookedByUser ?? $booking->user;
-            $bookedByName = $bookedByUser ? strtoupper($bookedByUser->name) : 'N/A';
-            
-            // Single ticket price (from seat's final_amount)
-            $singleTicketPrice = number_format($seat->final_amount, 0);
-            
-            // Single seat number
-            $seatDisplay = 'SEAT NO. ' . str_pad($seat->seat_number, 2, '0', STR_PAD_LEFT);
-            if ($seat->gender) {
-                $seatDisplay .= ' (' . strtoupper($seat->gender->value) . ')';
-            }
-            
-            $isDuplicate = $booking->status === 'cancelled' || $booking->created_at->lt(now()->subDay());
-        @endphp
+    @foreach($passengers as $index => $passenger)
+    @php
+        $settings = \App\Models\GeneralSetting::first();
+        $fromTripStop = $booking->trip->stops->firstWhere('terminal_id', $booking->fromStop->terminal_id);
+        $toTripStop = $booking->trip->stops->firstWhere('terminal_id', $booking->toStop->terminal_id);
+        $departureDateTime = $fromTripStop?->departure_at ?? $booking->trip->departure_datetime;
+        $departureDate = $departureDateTime ? $departureDateTime->format('d-m-Y') : 'N/A';
+        $departureTime = $departureDateTime ? $departureDateTime->format('h:i A') : 'N/A';
+        $departureDateShort = $departureDateTime ? $departureDateTime->format('d/m/Y') : 'N/A';
 
-        <div class="ticket">
-            <div class="ticket-main">
-                <h2>{{ $settings->company_name ?? 'BS/Niazi' }}</h2>
-                <p class="daewoo-bus-service">{{ $settings->tagline ?? 'Bashir Sons Group' }}</p>
+        $bus = $booking->trip->bus;
+        $busName = $bus->name ?? 'N/A';
+        $busRegistration = $bus->registration_number ?? '';
+        $busCode = $booking->fromStop->terminal->code ?? '';
+        $routeCode = $busRegistration && $busCode ? $busRegistration . ' ' . $busCode : ($busRegistration ?: ($busCode ?: 'N/A'));
+        $fromTerminalName = strtoupper($booking->fromStop->terminal->name ?? 'N/A');
+        $toTerminalName = strtoupper($booking->toStop->terminal->name ?? 'N/A');
+        $fromTerminalCode = strtoupper($booking->fromStop->terminal->code ?? '');
+        $toTerminalCode = strtoupper($booking->toStop->terminal->code ?? '');
+        $routeDisplay = $fromTerminalCode . '-' . $toTerminalCode . ' ' . $departureTime;
+        $bookedByUser = $booking->bookedByUser ?? $booking->user;
+        $bookedByName = $bookedByUser ? strtoupper($bookedByUser->name) : 'N/A';
 
-                <div class="route-info">
-                    <p>{{ $routeDisplay }}</p>
-                    <p>From {{ $fromTerminalName }} To {{ $toTerminalName }}</p>
-                    <p>{{ $departureDate }} {{ $departureTime }}</p>
-                    <p>{{ $routeCode }}</p>
-                </div>
+        // Seats of this passenger
+        $passengerSeats = $seats->filter(fn($s) => $s->passenger_id == $passenger->id);
+        $seatFare = $seatFares->first();
+    @endphp
 
-                <div class="details-top">
-                    <p>
-                        @if($isDuplicate)
-                            Duplicate
-                        @endif
-                    </p>
-                    <p class="seat-info">{{ $seatDisplay }}</p>
-                </div>
+    <div class="ticket">
+        <div class="ticket-main">
+            <h2>{{ $settings->company_name ?? 'BS/Niazi' }}</h2>
+            <p class="daewoo-bus-service">{{ $settings->tagline ?? 'Bashir Sons Group' }}</p>
 
-                <div class="details-body">
-                    <p>Sr #&nbsp;&nbsp; 1 &nbsp;&nbsp;&nbsp; Pax&nbsp;&nbsp; 1 &nbsp;&nbsp;&nbsp; Total&nbsp;&nbsp; {{ $singleTicketPrice }}</p>
-                    <p>PNR&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $booking->booking_number }}</p>
-                    <p>Name&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ strtoupper($passenger->name ?? 'N/A') }}</p>
-                    <p>CNIC&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $passenger->cnic ?? 'N/A' }}</p>
-                    <p>Cell&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; {{ $passenger->phone ?? 'N/A' }}</p>
-                </div>
-
-                <div class="footer-info">
-                    <p>Prepared By {{ $bookedByName }}</p>
-                    <p>{{ $booking->created_at->format('n/j/Y g:i a') }}</p>
-                </div>
-
-                <p class="urdu-text" dir="rtl">
-                    گاڑی روانگی ٹائم سے 15 منٹ پہلے تشریف لائیں شکریہ
-                </p>
-
-                <div class="contact-info">
-                    <p>For Booking, Complaints & Suggestions</p>
-                    <p class="uan">UAN: {{ $settings->phone ?? '041 111 737 737' }}</p>
-                    <p>For Online Ticket Booking Please Visit</p>
-                    <p class="website-link">{{ $settings->website_url ?? 'www.bashirsonsgroup.com' }}</p>
-                </div>
+            <div class="route-info">
+                <p>{{ $routeDisplay }}</p>
+                <p>From {{ $fromTerminalName }} To {{ $toTerminalName }}</p>
+                <p>{{ $departureDate }} {{ $departureTime }}</p>
+                <p>{{ $routeCode }}</p>
             </div>
 
-            <hr>
-
-            <div class="ticket-stub">
-                <p class="route-info">{{ $routeDisplay }}</p>
-                <p class="route-info">From {{ $fromTerminalName }} To {{ $toTerminalName }}</p>
-                <p class="route-info">{{ $departureDate }} {{ $departureTime }}</p>
-                <p class="route-info">{{ $routeCode }}</p>
-
-                <p class="stub-footer">
-                    {{ $booking->created_at->format('d/m/Y g:i a') }}
-                    <span class="seat-info">{{ $seatDisplay }}</span>
+            <div class="details-top seat-grid" style="display: block;">
+                <p>
+                    @if($booking->status === 'cancelled' || $booking->created_at->lt(now()->subDay()))
+                        Duplicate
+                    @endif
                 </p>
 
-                <p class="stub-prepared">Prepared By {{ $bookedByName }}</p>
+                @foreach($seatingMap as $seat)
+                    <p class="seat-info" >SEAT NO. {{ str_pad($seat->seat_number, 2, '0', STR_PAD_LEFT) }} ({{ strtoupper($seat->gender->value ?? '') }})</p>
+                @endforeach
+            </div>
+
+            <div class="details-body">
+                <p>Sr #&nbsp;&nbsp; 1 &nbsp;&nbsp;&nbsp; Fare&nbsp;&nbsp; {{ $seatFare }}</p>
+                <p>Total Fare: {{ number_format($totalFare,0) }}</p>
+                <p>PNR: {{ $booking->booking_number }}</p>
+                <p>Name: {{ strtoupper($passenger->name ?? 'N/A') }}</p>
+                <p>CNIC: {{ $passenger->cnic ?? 'N/A' }}</p>
+                <p>Cell: {{ $passenger->phone ?? 'N/A' }}</p>
+            </div>
+
+            <div class="footer-info">
+                <p>Prepared By {{ $bookedByName }}</p>
+                <p>{{ $booking->created_at->format('n/j/Y g:i a') }}</p>
+            </div>
+
+            <p class="urdu-text" dir="rtl">
+                گاڑی روانگی ٹائم سے 15 منٹ پہلے تشریف لائیں شکریہ
+            </p>
+
+            <div class="contact-info">
+                <p>For Booking, Complaints & Suggestions</p>
+                <p class="uan">UAN: {{ $settings->phone ?? '041 111 737 737' }}</p>
+                <p>For Online Ticket Booking Please Visit</p>
+                <p class="website-link">{{ $settings->website_url ?? 'www.bashirsonsgroup.com' }}</p>
             </div>
         </div>
-    @endforeach
+
+        <hr>
+
+        <div class="ticket-stub">
+            <p class="route-info">{{ $routeDisplay }}</p>
+            <p class="route-info">From {{ $fromTerminalName }} To {{ $toTerminalName }}</p>
+            <p class="route-info">{{ $departureDate }} {{ $departureTime }}</p>
+            <p class="route-info">{{ $routeCode }}</p>
+
+            <p class="stub-footer">
+                {{ $booking->created_at->format('d/m/Y g:i a') }}<br>
+                @foreach($seatingMap as $seatMap)
+                    <span class="seat-info" style="display: block;">SEAT NO. {{ $seatMap['seat_number'] }} ({{ strtoupper($seatMap['gender']->value) }})</span>
+                @endforeach
+            </p>
+
+            <p class="stub-prepared">Prepared By {{ $bookedByName }}</p>
+        </div>
+    </div>
+@endforeach
+
 
     <script>
         window.addEventListener('beforeprint', function() {
