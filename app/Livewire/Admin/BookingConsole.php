@@ -524,7 +524,7 @@ class BookingConsole extends Component
                 $tripFactory = app(TripFactoryService::class);
                 $trip = $tripFactory->createFromTimetable($timetable->id, $this->travelDate);
             }
-            $this->isPosted = $trip->is_posted;
+
             $trip->load(['stops.terminal:id,name,code', 'originStop', 'bus.busLayout']);
 
             $routeStops = RouteStop::where('route_id', $route->id)
@@ -545,7 +545,7 @@ class BookingConsole extends Component
             if (! $tripFromStop || ! $tripToStop) {
                 throw new \Exception('Selected terminals not found in trip');
             }
-
+            $this->isPosted = $tripFromStop->is_posted;
             $tripFromStop->load('terminal:id,name,code');
             $tripToStop->load('terminal:id,name,code');
 
@@ -1575,8 +1575,8 @@ class BookingConsole extends Component
     {
         $this->validate([
             'selectedBusId' => 'required|exists:buses,id',
-            'driverName' => 'required|string|max:255',
-            'driverPhone' => 'required|string|max:20',
+            'driverName' => 'nullable|string|max:255',
+            'driverPhone' => 'nullable|string|max:20',
             'driverAddress' => 'nullable|string|max:500',
             'hostName' => 'nullable|string|max:255',
             'hostPhone' => 'nullable|string|max:20',
@@ -1586,8 +1586,6 @@ class BookingConsole extends Component
             'expenses.*.description' => 'nullable|string|max:500',
         ], [
             'selectedBusId.required' => 'Please select a bus',
-            'driverName.required' => 'Driver name is required',
-            'driverPhone.required' => 'Driver phone is required',
         ]);
 
         try {
@@ -2064,14 +2062,14 @@ class BookingConsole extends Component
             return;
         }
         // Update in DB
-        Trip::where('id', $this->tripId)
+        TripStop::where('trip_id', $this->tripId)->where('terminal_id', $this->fromStop['terminal_id'])
             ->update(['is_posted' => 1]);
 
         // Freeze UI
         $this->isPosted = 1;
 
         // Optional: show toast
-        $this->dispatch('show-success', message: 'Trip has been posted successfully. All actions are now locked.');
+        $this->dispatch('show-success', message: 'Trip from '.$this->fromStop['terminal_name'].' has been posted successfully. All actions are now locked.');
     }
     public function render()
     {

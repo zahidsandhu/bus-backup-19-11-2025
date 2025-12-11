@@ -63,6 +63,13 @@
             font-size: 10px;
         }
 
+        .left-summary {
+            width: 200px;
+            font-weight: bold;
+            font-size: 10px;
+            float: right;
+        }
+
         .summary-line {
             display: flex;
             justify-content: space-between;
@@ -226,7 +233,7 @@
             </tr>
         </table>
 
-        <div class="right-summary">
+        <div class="left-summary">
             <div class="summary-line">
                 <span>Counter Sales:</span>
                 <span>{{ number_format($counterSales, 0) }}</span>
@@ -244,38 +251,6 @@
                 <span>{{ number_format($balance, 0) }}</span>
             </div>
             <div class="date-time">{{ $printDateTime }}</div>
-        </div>
-
-        <div class="footer-table-container">
-            <table class="footer-table">
-                <thead>
-                    <tr>
-                        <td></td>
-                        @foreach ($agents as $agent)
-                        <th>{{ $agent }}</th>
-                        @endforeach
-                        <th class="total-col-header">Total</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach ($destinations as $dest)
-                    <tr>
-                        <td class="dest-cell">{{ $dest }}</td>
-                        @foreach ($agents as $agent)
-                        <td>{{ number_format($agentBreakdown[$agent][$dest] ?? 0, 0) }}</td>
-                        @endforeach
-                        <td class="total-col-data">{{ number_format($destinationTotals[$dest] ?? 0, 0) }}</td>
-                    </tr>
-                    @endforeach
-                    <tr class="final-total">
-                        <td class="dest-cell">Total</td>
-                        @foreach ($agents as $agent)
-                        <td>{{ number_format($agentTotals[$agent] ?? 0, 0) }}</td>
-                        @endforeach
-                        <td class="total-col-data">{{ number_format($grandTotal, 0) }}</td>
-                    </tr>
-                </tbody>
-            </table>
         </div>
     </div>
 </body>

@@ -165,13 +165,45 @@
                                             $seatsPerRow = 4;
                                             $fullRows = floor($remaining / $seatsPerRow);
 
-                                            // Leftover seats (1, 2, or 3 seats)
+                                            // Leftover seats (1,2,3)
                                             $leftover = $remaining % $seatsPerRow;
 
-                                            // Starting seat number
+                                            // START seat number
                                             $current = 1;
-                                        @endphp
 
+                                            // 🟦 SHIFT START IF LEFTOVER EXISTS
+                                            // Example: leftover = 3 → skip seats 1,2,3 → start from 4
+
+                                        @endphp
+                                        @if ($leftover > 0)
+                                            @php
+                                                $seats = [
+                                                    $current + 2,
+                                                    $current + 1,
+                                                    $current
+                                                ];
+                                            @endphp
+                                            <div class="seat-row-container" style="justify-content:center; gap:0.5rem;">
+                                                @for ($i = 0; $i < $leftover; $i++)
+                                                    @if($i == 0)
+                                                        <div class="seat-pair-left">
+                                                            @include('components.seat-button', ['seat' => 1 + $i])
+                                                        </div>
+                                                        <div class="seat-aisle">0</div>
+                                                    @else
+                                                        <div class="seat-pair-right">
+                                                            @include('components.seat-button', ['seat' => 1 + $i])
+                                                        </div>
+                                                    @endif
+                                                @endfor
+                                            </div>
+
+                                        @endif
+                                        @php
+                                         if ($leftover > 0) {
+                                                $current = $leftover + 1;
+                                            }
+                                        @endphp
                                         {{-- FULL 4-SEAT ROWS (RIGHT → LEFT) --}}
                                         @for ($row = 1; $row <= $fullRows; $row++)
                                             @php
@@ -185,6 +217,7 @@
                                             @endphp
 
                                             <div class="seat-row-container">
+
                                                 <div class="seat-pair-right">
                                                     @foreach ([$seats[0], $seats[1]] as $seat)
                                                         @include('components.seat-button', ['seat' => $seat])
@@ -200,16 +233,7 @@
                                                 </div>
                                             </div>
                                         @endfor
-
                                         {{-- PARTIAL ROW (IF LEFTOVER = 1,2,3 SEATS) --}}
-                                        @if ($leftover > 0)
-                                            <div class="seat-row-container" style="justify-content:center; gap:0.5rem;">
-                                                @for ($i = 0; $i < $leftover; $i++)
-                                                    @include('components.seat-button', ['seat' => $current + $i])
-                                                @endfor
-                                            </div>
-                                            @php $current += $leftover; @endphp
-                                        @endif
 
                                         {{-- LAST 5-SEAT ROW --}}
                                         <div class="seat-row-container last-row-5"
@@ -389,6 +413,14 @@
                                                         @error("passengers.{$index}.email")
                                                             <small class="text-danger">{{ $message }}</small>
                                                         @enderror
+                                                    </div>
+                                                    <div class="col-lg-4 col-md-6">
+                                                        <label class="form-label small">Upload data to HotelEye</label>
+
+                                                        <div class="form-check">
+                                                            <input type="checkbox" class="form-check-input" id="uploadToHotelEye" @disabled($isPosted == 1)>
+                                                            <label class="form-check-label small" for="uploadToHotelEye"></label>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -995,8 +1027,7 @@
                             <h6 class="fw-bold mb-3"><i class="fas fa-user-tie"></i> Driver Information</h6>
                             <div class="row g-3">
                                 <div class="col-lg-6 col-md-12">
-                                    <label class="form-label small">Driver Name <span
-                                            class="text-danger">*</span></label>
+                                    <label class="form-label small">Driver Name </label>
                                     <input type="text" class="form-control form-control-sm"
                                         wire:model="driverName" placeholder="Enter driver name" maxlength="255">
                                     @error('driverName')
@@ -1004,8 +1035,7 @@
                                     @enderror
                                 </div>
                                 <div class="col-lg-6 col-md-12">
-                                    <label class="form-label small">Driver Phone <span
-                                            class="text-danger">*</span></label>
+                                    <label class="form-label small">Driver Phone </label>
                                     <input type="tel" class="form-control form-control-sm"
                                         wire:model="driverPhone" placeholder="03001234567" pattern="^0[0-9]{10}$"
                                         maxlength="11" inputmode="numeric"
