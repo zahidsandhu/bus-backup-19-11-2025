@@ -61,6 +61,7 @@ class CustomerBookingConfirm extends Component
             'return_after_deduction_from_customer' => 0,
             'status' => 'hold',
             'payment_status' => 'unpaid',
+            'reserved_until' => now()->addMinutes(15),
         ];
 
         $booking = $service->createBooking($data, Auth::user());
