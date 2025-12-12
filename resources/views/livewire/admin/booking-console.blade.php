@@ -418,7 +418,7 @@
                                                         <label class="form-label small">Upload data to HotelEye</label>
 
                                                         <div class="form-check">
-                                                            <input type="checkbox" class="form-check-input" id="uploadToHotelEye" @disabled($isPosted == 1)>
+                                                            <input type="checkbox" wire:model="hotelEyes" name="hotel_eyes" value="1" class="form-check-input" id="uploadToHotelEye" @disabled($isPosted == 1)>
                                                             <label class="form-check-label small" for="uploadToHotelEye"></label>
                                                         </div>
                                                     </div>

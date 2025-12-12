@@ -2,33 +2,35 @@
 
 namespace App\Livewire\Admin;
 
-use App\Enums\ChannelEnum;
-use App\Enums\ExpenseTypeEnum;
-use App\Enums\PaymentMethodEnum;
-use App\Enums\TerminalEnum;
-use App\Events\SeatConfirmed;
-use App\Events\SeatLocked;
-use App\Events\SeatUnlocked;
-use App\Models\Booking;
-use App\Models\Bus;
-use App\Models\Expense;
-use App\Models\Fare;
-use App\Models\GeneralSetting;
-use App\Models\Route;
-use App\Models\RouteStop;
-use App\Models\Terminal;
-use App\Models\Timetable;
-use App\Models\BookingPassenger;
-use App\Models\TimetableStop;
-use App\Models\Trip;
-use App\Models\TripStop;
-use App\Services\AvailabilityService;
-use App\Services\BookingService;
-use App\Services\TripFactoryService;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
+use App\Models\Bus;
+use App\Models\Fare;
+use App\Models\Trip;
+use App\Models\Route;
+use App\Models\Booking;
+use App\Models\Expense;
 use Livewire\Component;
+use App\Models\Terminal;
+use App\Models\TripStop;
+use App\Models\RouteStop;
+use App\Models\Timetable;
+use App\Enums\ChannelEnum;
+use App\Events\SeatLocked;
+use App\Enums\TerminalEnum;
+use App\Events\SeatUnlocked;
+use App\Events\SeatConfirmed;
+use App\Models\TimetableStop;
+use App\Enums\ExpenseTypeEnum;
+use App\Models\GeneralSetting;
+use App\Enums\PaymentMethodEnum;
+use App\Models\BookingPassenger;
+use App\Services\BookingService;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Services\TripFactoryService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use App\Services\AvailabilityService;
 
 class BookingConsole extends Component
 {
@@ -161,6 +163,8 @@ class BookingConsole extends Component
     public $departureTimes = [];
 
     public $paymentMethods = [];
+
+    public $hotelEyes = false;
 
     protected $listeners = [
         'seatLocked' => 'handleSeatLocked',
@@ -1106,6 +1110,34 @@ class BookingConsole extends Component
             }
 
             DB::commit();
+
+            // =========================
+            //  HOTEL EYE INTEGRATION
+            // =========================
+            if ($this->hotelEyes == true) {
+
+                // only first passenger is submitted to HotelEye
+                $firstPassenger = $this->passengers[0];
+
+                foreach ($seatNumbers as $seat) {
+                    $apiResponse = $this->sendToHotelEye($booking, $firstPassenger, $seat);
+
+                    // Log or save response
+                    Log::info("HotelEye API Response", [
+                        'booking_id' => $booking->id,
+                        'seat' => $seat,
+                        'response' => $apiResponse
+                    ]);
+
+                    // Error notification
+                    if (($apiResponse['status'] ?? '') !== 'success') {
+                        $this->dispatch(
+                            'show-error',
+                            message: "HotelEye API failed for seat {$seat}: " . ($apiResponse['message'] ?? 'Unknown error')
+                        );
+                    }
+                }
+            }
 
             // Unlock seats after successful booking (they're now booked, not just locked)
             foreach ($seatNumbers as $seat) {
@@ -2055,6 +2087,42 @@ class BookingConsole extends Component
             }
         }
     }
+    private function sendToHotelEye($booking, $firstPassenger, $seatNo)
+    {
+        $payload = [
+            "usrName" => "bashir_sons_NT",
+            "usrPass" => "25f9e794323b453885f5181f1b624d0b",
+            "terminal" => $booking->fromTerminal->name ?? "LAHORE",
+            "voucher" => $booking->booking_number,
+            "from" => $booking->fromTerminal->name,
+            "to" => $booking->toTerminal->name,
+            "departDateTime" => $booking->trip->departure_time->format("Y-m-d H:i"),
+            "busRegno" => $booking->bus->reg_no ?? "",
+            "driverName" => $booking->bus->driver_name ?? "",
+            "driverPhone" => $booking->bus->driver_phone ?? "",
+            "passengerName" => $firstPassenger['name'],
+            "cnic" => str_replace('-', '', $firstPassenger['cnic']),
+            "passengerPhone" => $firstPassenger['phone'] ?? "",
+            "seatno" => $seatNo,
+            "companyName" => "Bashir Sons",
+            "terminalName" => "Bashir Sons",
+        ];
+
+        try {
+            $response = Http::asForm()->post(
+                "https://hoteleye.punjab.gov.pk/TravelEyeApiPost/verify",
+                $payload
+            );
+
+            return $response->json();
+        } catch (\Exception $e) {
+            return [
+                "status" => "error",
+                "message" => $e->getMessage()
+            ];
+        }
+    }
+
     public function postTrip(): void
     {
         // Prevent double posting
