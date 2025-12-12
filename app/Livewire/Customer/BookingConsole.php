@@ -18,7 +18,6 @@ class BookingConsole extends AdminBookingConsole
 {
     public function loadToTerminals(): void
     {
-        dd($this->fromTerminalId);
         if (! $this->fromTerminalId) {
             $this->toTerminals = [];
 
