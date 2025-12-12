@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Customer\TerminalController;
 use App\Http\Controllers\Api\Customer\CustomerAuthController;
 use App\Http\Controllers\Api\Customer\CustomerBookingController;
 use App\Http\Controllers\Api\Customer\CustomerProfileController;
+use App\Http\Controllers\Api\Customer\CustomerComplaintApiController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,6 +53,9 @@ Route::prefix('customer')->group(function () {
         Route::post('bookings', [CustomerBookingController::class, 'store']);
         Route::get('bookings', [CustomerBookingController::class, 'history']);
         Route::post('bookings/{booking}/payment', [CustomerBookingController::class, 'pay']);
+        Route::get('/complaints', [CustomerComplaintApiController::class, 'index']);
+        Route::post('/complaints', [CustomerComplaintApiController::class, 'store']);
+        Route::get('/complaints/{id}', [CustomerComplaintApiController::class, 'show']);
     });
 });
 

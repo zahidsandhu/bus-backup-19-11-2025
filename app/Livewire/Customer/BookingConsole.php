@@ -37,6 +37,8 @@ class BookingConsole extends AdminBookingConsole
 
         foreach ($routes as $route) {
             $stops = RouteStop::where('route_id', $route->id)
+                ->where('online_booking_allowed', 1)
+                ->where('online_time_table', 1)
                 ->with('terminal:id,name,code')
                 ->orderBy('sequence')
                 ->get();
