@@ -4,20 +4,24 @@ namespace App\Http\Controllers;
 
 use App\Helpers\HolidayHelper;
 use App\Models\Booking;
+use App\Models\PaymentLog;
 use App\Services\BookingService;
+use App\Services\JazzCashService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class PaymentController extends Controller
 {
     public function __construct(
-        private BookingService $bookingService
+        private BookingService $bookingService,
+        private JazzCashService $jazzCashService
     ) {}
 
-    public function show(Request $request, Booking $booking)
+    public function show(Request $request, Booking $booking): View|RedirectResponse
     {
         // Verify booking belongs to authenticated user
         if ($booking->user_id !== Auth::id()) {
@@ -41,69 +45,45 @@ class PaymentController extends Controller
             return redirect()->route('frontend.bookings.success', $booking)->with('success', 'Booking already confirmed!');
         }
 
-        return view('frontend.payment.index', compact('booking'));
+        // Ensure reservation window is at least 10 minutes
+        if (! $booking->reserved_until || $booking->reserved_until->lt(now()->addMinutes(10))) {
+            $booking->update(['reserved_until' => now()->addMinutes(10)]);
+            $booking->refresh();
+        }
+
+        // Build JazzCash payload using DB amount only
+        $payload = $this->jazzCashService->buildRequestPayload($booking);
+
+        // Create / update payment log
+        PaymentLog::updateOrCreate(
+            ['txn_reference' => $payload['pp_TxnRefNo']],
+            [
+                'booking_id' => $booking->id,
+                'gateway' => 'jazzcash',
+                'amount' => (int) $payload['pp_Amount'],
+                'status' => 'initiated',
+                'response_code' => null,
+                'message' => null,
+                'request_payload' => $payload,
+                'response_payload' => null,
+            ]
+        );
+
+        $booking->update([
+            'payment_gateway' => 'jazzcash',
+            'gateway_transaction_reference' => $payload['pp_TxnRefNo'],
+        ]);
+
+        return view('frontend.payment.index', [
+            'booking' => $booking,
+            'jazzcash' => $payload,
+            'jazzcashUrl' => $this->jazzCashService->endpoint(),
+        ]);
     }
 
     public function process(Request $request, Booking $booking): RedirectResponse
     {
-        // Verify booking belongs to authenticated user
-        if ($booking->user_id !== Auth::id()) {
-            abort(403, 'Unauthorized access to this booking.');
-        }
-
-        // Check if booking is expired
-        if ($booking->status === 'expired' || ($booking->reserved_until && now()->gt($booking->reserved_until))) {
-            $booking->update(['status' => 'expired']);
-
-            return redirect()->route('frontend.bookings.payment', $booking)
-                ->with('error', 'Booking has expired. Please create a new booking.');
-        }
-
-        if (HolidayHelper::isHoliday($booking->trip->departure_date)) {
-            return redirect()->route('frontend.bookings.payment', $booking)
-                ->with('error', 'Bookings are closed during the holiday period.')
-                ->withInput();
-        }
-
-        $validated = $request->validate([
-            'payment_method' => 'required|in:easypaisa,jazzcash',
-            'transaction_id' => 'required|string|max:100',
-        ]);
-
-        try {
-            // Process payment (mock implementation - integrate with actual payment gateway)
-            $paymentMethod = $validated['payment_method'];
-            $transactionId = $validated['transaction_id'];
-
-            // Verify payment with gateway (placeholder - implement actual gateway integration)
-            $paymentVerified = $this->verifyPayment($paymentMethod, $transactionId, $booking->final_amount);
-
-            if ($paymentVerified) {
-                // Confirm payment
-                $this->bookingService->confirmPayment($booking, $paymentMethod, $booking->final_amount);
-
-                // Update booking with transaction ID
-                $booking->update([
-                    'online_transaction_id' => $transactionId,
-                ]);
-
-                return redirect()->route('frontend.bookings.success', $booking)
-                    ->with('success', 'Payment successful! Your booking has been confirmed.');
-            } else {
-                return redirect()->route('frontend.bookings.payment', $booking)
-                    ->with('error', 'Payment verification failed. Please try again or contact support.')
-                    ->withInput();
-            }
-        } catch (\Exception $e) {
-            Log::error('Payment processing error: '.$e->getMessage(), [
-                'booking_id' => $booking->id,
-                'user_id' => Auth::id(),
-            ]);
-
-            return redirect()->route('frontend.bookings.payment', $booking)
-                ->with('error', 'An error occurred while processing your payment. Please try again.')
-                ->withInput();
-        }
+        abort(404);
     }
 
     public function success(Booking $booking): View
@@ -118,22 +98,120 @@ class PaymentController extends Controller
         return view('frontend.payment.success', compact('booking'));
     }
 
-    /**
-     * Verify payment with gateway (placeholder - implement actual gateway integration)
-     */
-    private function verifyPayment(string $gateway, string $transactionId, float $amount): bool
+    public function jazzCashCallback(Request $request): View
     {
-        // TODO: Implement actual payment gateway verification
-        // For now, accept any transaction ID (for testing)
-        // In production, verify with Easypaisa/JazzCash APIs
+        $data = $request->all();
 
-        Log::info('Payment verification requested', [
-            'gateway' => $gateway,
-            'transaction_id' => $transactionId,
-            'amount' => $amount,
-        ]);
+        Log::info('JazzCash callback received', $data);
 
-        // Mock verification - accept if transaction ID is provided
-        return ! empty($transactionId);
+        if (! $this->jazzCashService->validateSecureHash($data)) {
+            Log::warning('JazzCash secure hash mismatch', $data);
+
+            $this->markPaymentFailed(null, $data, 'invalid_hash');
+
+            return view('frontend.payment.callback-failed')->with('error', 'Invalid payment signature.');
+        }
+
+        $txnRefNo = $data['pp_TxnRefNo'] ?? null;
+        $amount = isset($data['pp_Amount']) ? (int) $data['pp_Amount'] : null;
+        $respCode = $data['pp_ResponseCode'] ?? null;
+        $respMsg = $data['pp_ResponseMessage'] ?? null;
+
+        if (! $txnRefNo || ! $amount) {
+            $this->markPaymentFailed(null, $data, 'missing_reference');
+
+            return view('frontend.payment.callback-failed')->with('error', 'Invalid payment data.');
+        }
+
+        $log = PaymentLog::where('txn_reference', $txnRefNo)->first();
+
+        if (! $log) {
+            $this->markPaymentFailed(null, $data, 'log_not_found');
+
+            return view('frontend.payment.callback-failed')->with('error', 'Payment record not found.');
+        }
+
+        if ($log->status === 'success') {
+            $booking = $log->booking()->with(['trip.route', 'fromStop.terminal', 'toStop.terminal'])->first();
+
+            return view('frontend.payment.callback-success', compact('booking'));
+        }
+
+        $booking = $log->booking()->lockForUpdate()->with('trip')->first();
+
+        if (! $booking) {
+            $this->markPaymentFailed($log, $data, 'booking_not_found');
+
+            return view('frontend.payment.callback-failed')->with('error', 'Booking not found.');
+        }
+
+        return DB::transaction(function () use ($booking, $log, $amount, $respCode, $respMsg, $data) {
+            $expectedAmount = (int) ($booking->final_amount * 100);
+
+            if ($amount !== $expectedAmount) {
+                $this->markPaymentFailed($log, $data, 'amount_mismatch');
+
+                return view('frontend.payment.callback-failed')->with('error', 'Amount mismatch.');
+            }
+
+            if ($booking->payment_status === 'paid' || $booking->status === 'confirmed') {
+                return view('frontend.payment.callback-success', compact('booking'));
+            }
+
+            if ($respCode === '000') {
+                $log->update([
+                    'status' => 'success',
+                    'response_code' => $respCode,
+                    'message' => $respMsg,
+                    'response_payload' => $data,
+                ]);
+
+                $this->bookingService->confirmPayment($booking, 'jazzcash', $booking->final_amount);
+
+                $booking->update([
+                    'payment_gateway' => 'jazzcash',
+                    'gateway_transaction_reference' => $log->txn_reference,
+                    'online_transaction_id' => $data['pp_RetreivalReferenceNo'] ?? $log->txn_reference,
+                ]);
+
+                app(\App\Services\TicketService::class)->sendTicket($booking);
+
+                return view('frontend.payment.callback-success', compact('booking'));
+            }
+
+            $this->markPaymentFailed($log, $data, $respCode ?? 'failed');
+
+            $booking->update([
+                'status' => 'expired',
+                'payment_status' => 'unpaid',
+            ]);
+            $booking->delete();
+
+            return view('frontend.payment.callback-failed')->with('error', 'Payment failed or was cancelled.');
+        });
+    }
+
+    protected function markPaymentFailed(?PaymentLog $log, array $data, string $reason): void
+    {
+        if ($log) {
+            $log->update([
+                'status' => 'failed',
+                'response_code' => $reason,
+                'message' => $data['pp_ResponseMessage'] ?? null,
+                'response_payload' => $data,
+            ]);
+        } else {
+            PaymentLog::create([
+                'booking_id' => $data['booking_id'] ?? null,
+                'gateway' => 'jazzcash',
+                'txn_reference' => $data['pp_TxnRefNo'] ?? 'unknown-'.now()->timestamp,
+                'amount' => isset($data['pp_Amount']) ? (int) $data['pp_Amount'] : 0,
+                'status' => 'failed',
+                'response_code' => $reason,
+                'message' => $data['pp_ResponseMessage'] ?? null,
+                'request_payload' => [],
+                'response_payload' => $data,
+            ]);
+        }
     }
 }

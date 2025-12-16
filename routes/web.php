@@ -70,6 +70,10 @@ Route::prefix('bookings')->name('frontend.bookings.')->group(function () {
     });
 });
 
+// JazzCash callback (no auth middleware)
+Route::post('/payments/jazzcash/callback', [PaymentController::class, 'jazzCashCallback'])
+    ->name('payments.jazzcash.callback');
+
 // Frontend Routes
 Route::middleware(['guest', '2fa.pending'])->group(function () {
     Route::get('/two-factor-challenge', [TwoFactorController::class, 'challenge'])->name('2fa.challenge');

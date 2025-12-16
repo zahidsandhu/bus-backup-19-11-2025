@@ -27,6 +27,8 @@ class Booking extends Model
         'reserved_until',
         'payment_status',
         'payment_method',
+        'payment_gateway',
+        'gateway_transaction_reference',
         'online_transaction_id',
         'total_fare',
         'discount_amount',

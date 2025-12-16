@@ -154,26 +154,28 @@
                                         @php
                                             $totalSeats = $seatCount ?? (count($seatMap) > 0 ? max(array_keys($seatMap)) : 44);
 
-                                            // Last row always 5 seats
-                                            $lastRowCount = 5;
-                                            $startLastRow = $totalSeats - ($lastRowCount - 1);
-
-                                            // Remaining seats before last row
-                                            $remaining = $totalSeats - $lastRowCount;
-
-                                            // Full rows of 4 seats
                                             $seatsPerRow = 4;
-                                            $fullRows = floor($remaining / $seatsPerRow);
-
-                                            // Leftover seats (1,2,3)
-                                            $leftover = $remaining % $seatsPerRow;
-
-                                            // START seat number
                                             $current = 1;
 
-                                            // 🟦 SHIFT START IF LEFTOVER EXISTS
-                                            // Example: leftover = 3 → skip seats 1,2,3 → start from 4
+                                            // ✅ Check if total seats is ODD
+                                            $hasLastFiveRow = ($totalSeats % 2 !== 0);
 
+                                            if ($hasLastFiveRow) {
+                                                // Last row has 5 seats
+                                                $lastRowCount = 5;
+                                                $remainingSeats = $totalSeats - $lastRowCount;
+                                                $startLastRow = $totalSeats - ($lastRowCount - 1);
+                                            } else {
+                                                // No special last row
+                                                $lastRowCount = 0;
+                                                $remainingSeats = $totalSeats;
+                                            }
+
+                                            // Full rows of 4
+                                            $fullRows = floor($remainingSeats / $seatsPerRow);
+
+                                            // Leftover seats (only possible if even logic changes in future)
+                                            $leftover = $remainingSeats % $seatsPerRow;
                                         @endphp
                                         @if ($leftover > 0)
                                             @php
@@ -236,12 +238,14 @@
                                         {{-- PARTIAL ROW (IF LEFTOVER = 1,2,3 SEATS) --}}
 
                                         {{-- LAST 5-SEAT ROW --}}
-                                        <div class="seat-row-container last-row-5"
-                                            style="display:flex; justify-content:center; gap:0.5rem">
-                                            @for ($seat = $startLastRow; $seat <= $totalSeats; $seat++)
-                                                @include('components.seat-button', ['seat' => $seat])
-                                            @endfor
-                                        </div>
+                                        @if($hasLastFiveRow)
+                                            <div class="seat-row-container last-row-5"
+                                                style="display:flex; justify-content:center; gap:0.5rem">
+                                                @for ($seat = $startLastRow; $seat <= $totalSeats; $seat++)
+                                                    @include('components.seat-button', ['seat' => $seat])
+                                                @endfor
+                                            </div>
+                                        @endif
                                     </div>
 
                                 <!-- Legend at bottom of seat map -->

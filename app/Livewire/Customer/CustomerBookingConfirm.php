@@ -49,7 +49,8 @@ class CustomerBookingConfirm extends Component
             ])->toArray(),
             'passengers' => $draft['passengers'],
             'channel' => 'online',
-            'payment_method' => 'mobile_wallet',
+            'payment_method' => 'jazzcash',
+            'payment_gateway' => 'jazzcash',
             'online_transaction_id' => null,
             'total_fare' => $draft['total_fare'],
             'discount_amount' => $draft['discount_amount'],
@@ -61,15 +62,25 @@ class CustomerBookingConfirm extends Component
             'return_after_deduction_from_customer' => 0,
             'status' => 'hold',
             'payment_status' => 'unpaid',
-            'reserved_until' => now()->addMinutes(15),
+            'reserved_until' => now()->addMinutes(10),
         ];
 
-        $booking = $service->createBooking($data, Auth::user());
+        try {
+            $booking = $service->createBooking($data, Auth::user());
+        } catch (\Throwable $e) {
+            report($e);
+
+            throw ValidationException::withMessages([
+                'booking' => 'Unable to create booking: '.$e->getMessage(),
+            ]);
+        }
 
         Session::forget('customer_booking_draft');
 
         $this->bookingNumber = $booking->booking_number;
         $this->bookingId = $booking->id;
+
+        $this->redirectRoute('frontend.bookings.payment', $booking);
     }
 
     public function getTripProperty(): ?Trip
