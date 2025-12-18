@@ -5,13 +5,14 @@ namespace App\Http\Controllers\Api\Customer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Resources\Customer\UserResource;
+use App\Models\PasswordResetOtp;
 use App\Models\User;
+use App\Notifications\ForgotPasswordOtp;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules;
 
 class CustomerAuthController extends Controller
@@ -107,21 +108,41 @@ class CustomerAuthController extends Controller
             'email' => ['required', 'string', 'email'],
         ]);
 
-        $status = Password::broker()->sendResetLink([
-            'email' => $validated['email'],
+        /** @var \App\Models\User|null $user */
+        $user = User::where('email', $validated['email'])->first();
+
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'The provided email is invalid.',
+            ], 422);
+        }
+
+        $otp = (string) random_int(100000, 999999);
+
+        PasswordResetOtp::create([
+            'user_id' => $user->id,
+            'otp' => $otp,
         ]);
 
-        if ($status === Password::RESET_LINK_SENT) {
-            return response()->json([
-                'success' => true,
-                'message' => __($status),
-            ]);
+        $emailSent = true;
+
+        try {
+            $user->notify(new ForgotPasswordOtp($otp));
+        } catch (\Throwable $e) {
+            $emailSent = false;
         }
 
         return response()->json([
-            'success' => false,
-            'message' => __($status),
-        ], 422);
+            'success' => true,
+            'message' => $emailSent
+                ? 'An OTP has been sent to your email address.'
+                : 'An OTP has been generated. Email sending failed, please use the OTP from this response.',
+            'data' => [
+                'otp' => $otp,
+                'email_sent' => $emailSent,
+            ],
+        ]);
     }
 
     /**
