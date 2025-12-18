@@ -774,7 +774,7 @@
             columns: [
                 { data: 'booking_number_formatted', name: 'booking_number' },
                 { data: 'date_time', name: 'created_at' },
-                { data: 'departure_date_time', name: 'departure_date_time' },
+                { data: 'departure_date', name: 'departure_date' },
                 { data: 'route_info', name: 'route' },
                 { data: 'from_to', name: 'from_to' },
                 { data: 'passengers_count', name: 'total_passengers' },

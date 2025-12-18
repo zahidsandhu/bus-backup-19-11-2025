@@ -352,7 +352,9 @@ class TerminalReportController extends Controller
                 $q->where('terminal_id', $terminalId);
             })
             ->where('status', BookingStatusEnum::CONFIRMED->value)
-            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereHas('trip', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('departure_date', [$startDate, $endDate]);
+            })
             ->with([
                 'fromStop.terminal',
                 'toStop.terminal',
@@ -397,7 +399,7 @@ class TerminalReportController extends Controller
             ->addColumn('created_at', function (Booking $booking) {
                 return $booking->created_at->format('d M Y, H:i');
             })
-            ->addColumn('departure_date_time', function (Booking $booking) {
+            ->addColumn('departure_date', function (Booking $booking) {
                 return $booking->trip->departure_date?->format('d M Y, H:i');
             })
             ->addColumn('route', function (Booking $booking) {
