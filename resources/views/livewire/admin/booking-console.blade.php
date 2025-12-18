@@ -267,7 +267,7 @@
                                     </div>
                                     <div class="seat-legend-item">
                                         <div class="seat-legend-indicator held"></div>
-                                        <span>Held</span>
+                                        <span>Online</span>
                                     </div>
                                 </div>
                             </div>
