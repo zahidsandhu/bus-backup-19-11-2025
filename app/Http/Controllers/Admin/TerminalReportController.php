@@ -533,7 +533,9 @@ class TerminalReportController extends Controller
                 $q->where('terminal_id', $terminalId);
             })
             ->where('status', BookingStatusEnum::CONFIRMED->value)
-            ->whereBetween('created_at', [$startDate, $endDate])
+            ->whereHas('trip', function ($query) use ($startDate, $endDate) {
+                $query->whereBetween('departure_date', [$startDate, $endDate]);
+            })
             ->with([
                 'fromStop.terminal',
                 'toStop.terminal',
@@ -1506,7 +1508,9 @@ class TerminalReportController extends Controller
         // Build date range
         $startDate = Carbon::parse($validated['start_date'])->startOfDay();
         $endDate = Carbon::parse($validated['end_date'])->endOfDay();
-        $query->whereBetween('created_at', [$startDate, $endDate]);
+        $query->whereHas('trip', function ($query) use ($startDate, $endDate) {
+            $query->whereBetween('departure_date', [$startDate, $endDate]);
+        });
 
         // Apply filters
         if ($canViewAllReports) {
@@ -1546,6 +1550,9 @@ class TerminalReportController extends Controller
             })
             ->addColumn('date_time', function ($booking) {
                 return $booking->created_at->format('d M Y h:i A');
+            })
+            ->addColumn('departure_date', function ($booking) {
+                return $booking->trip->departure_date?->format('d M Y, H:i');
             })
             ->addColumn('route_info', function ($booking) {
                 if ($booking->trip && $booking->trip->route) {
