@@ -766,13 +766,14 @@
                     d.status = document.getElementById('filterStatus').value || null;
                     d.payment_status = document.getElementById('filterPaymentStatus').value || null;
                     d.payment_method = document.getElementById('filterPaymentMethod').value || null;
+                    d.payment_method = document.getElementById('filterPaymentMethod').value || null;
                     d.channel = document.getElementById('filterChannel').value || null;
                     d.is_advance = document.getElementById('filterAdvance').value || null;
                 }
             },
             columns: [
                 { data: 'booking_number_formatted', name: 'booking_number' },
-                { data: 'booking_date_time', name: 'booking_date_time' },
+                { data: 'date_time', name: 'created_at' },
                 { data: 'departure_date_time', name: 'departure_date_time' },
                 { data: 'route_info', name: 'route' },
                 { data: 'from_to', name: 'from_to' },

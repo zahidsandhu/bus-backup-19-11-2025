@@ -394,7 +394,7 @@ class TerminalReportController extends Controller
             ->addColumn('booking_number', function (Booking $booking) {
                 return '<span class="badge bg-primary">#'.$booking->booking_number.'</span>';
             })
-            ->addColumn('booking_date_time', function (Booking $booking) {
+            ->addColumn('created_at', function (Booking $booking) {
                 return $booking->created_at->format('d M Y, H:i');
             })
             ->addColumn('departure_date_time', function (Booking $booking) {
