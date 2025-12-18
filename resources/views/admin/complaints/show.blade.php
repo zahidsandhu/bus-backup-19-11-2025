@@ -108,17 +108,18 @@
                                 <button type="submit" class="btn btn-sm btn-primary">
                                     Save Changes
                                 </button>
-
-                                <form method="POST" action="{{ route('admin.complaints.destroy', $complaint) }}"
-                                      onsubmit="return confirm('Delete this complaint?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger">
-                                        Delete
-                                    </button>
-                                </form>
                             </div>
                         </form>
+                        <div class="mt-3 border-top pt-3">
+                        <form method="POST" action="{{ route('admin.complaints.destroy', $complaint) }}"
+                                onsubmit="return confirm('Delete this complaint?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    Delete
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>

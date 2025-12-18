@@ -52,20 +52,19 @@ class ComplaintController extends Controller
     public function update(Request $request, Complaint $complaint)
     {
         $validated = $request->validate([
-            'status' => ['required', 'string', 'in:open,in-progress,resolved,closed'],
             'admin_remarks' => ['nullable', 'string'],
             'employee_id' => ['nullable', 'exists:users,id'],
         ]);
 
         $complaint->update([
-            'status' => $validated['status'],
+            'status' => $request->status,
             'admin_remarks' => $validated['admin_remarks'] ?? null,
             'employee_id' => $validated['employee_id'] ?? null,
         ]);
 
         return redirect()
             ->route('admin.complaints.show', $complaint)
-            ->with('success', 'Complaint updated successfully.');
+            ->with('success', 'Complaints updated successfully.');
     }
 
     public function destroy(Complaint $complaint)
