@@ -394,8 +394,11 @@ class TerminalReportController extends Controller
             ->addColumn('booking_number', function (Booking $booking) {
                 return '<span class="badge bg-primary">#'.$booking->booking_number.'</span>';
             })
-            ->addColumn('created_at', function (Booking $booking) {
+            ->addColumn('booking_date_time', function (Booking $booking) {
                 return $booking->created_at->format('d M Y, H:i');
+            })
+            ->addColumn('departure_date_time', function (Booking $booking) {
+                return $booking->trip->departure_date?->format('d M Y, H:i');
             })
             ->addColumn('route', function (Booking $booking) {
                 $from = $booking->fromStop?->terminal?->code ?? 'N/A';
@@ -1379,7 +1382,7 @@ class TerminalReportController extends Controller
         $employeeStats = [];
         foreach ($employees as $employee) {
             $bookings = Booking::where('booked_by_user_id', $employee->id)
-                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('trip.departure_date', [$startDate, $endDate])
                 ->with([
                     'trip.route',
                     'fromStop.terminal',

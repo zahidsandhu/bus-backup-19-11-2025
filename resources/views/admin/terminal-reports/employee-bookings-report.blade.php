@@ -302,7 +302,8 @@
                         <thead class="table-light">
                             <tr>
                                 <th><i class="bx bx-ticket"></i> Booking #</th>
-                                <th><i class="bx bx-calendar"></i> Date & Time</th>
+                                <th><i class="bx bx-calendar"></i>Booking Date & Time</th>
+                                <th><i class="bx bx-calendar"></i>Departure Date & Time</th>
                                 <th><i class="bx bx-route"></i> Route</th>
                                 <th><i class="bx bx-map"></i> From → To</th>
                                 <th><i class="bx bx-user"></i> Passengers</th>
@@ -771,7 +772,8 @@
             },
             columns: [
                 { data: 'booking_number_formatted', name: 'booking_number' },
-                { data: 'date_time', name: 'created_at' },
+                { data: 'booking_date_time', name: 'booking_date_time' },
+                { data: 'departure_date_time', name: 'departure_date_time' },
                 { data: 'route_info', name: 'route' },
                 { data: 'from_to', name: 'from_to' },
                 { data: 'passengers_count', name: 'total_passengers' },
