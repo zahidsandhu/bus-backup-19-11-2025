@@ -20,6 +20,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Models\Role;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Yajra\DataTables\Facades\DataTables;
 
 class TerminalReportController extends Controller
@@ -1612,5 +1613,152 @@ class TerminalReportController extends Controller
             })
             ->rawColumns(['employee_info', 'status_badge', 'payment_status_badge', 'is_advance'])
             ->make(true);
+    }
+
+    public function exportBookingsCsv(Request $request): StreamedResponse
+    {
+        $this->authorize('view terminal reports');
+
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+        $canViewAllReports = $user->can('view all booking reports');
+        $hasTerminalAssigned = (bool) $user->terminal_id;
+
+        $validationRules = [
+            'start_date' => 'required|date',
+            'end_date' => 'required|date|after_or_equal:start_date',
+            'employee_id' => 'nullable|exists:users,id',
+        ];
+
+        if ($canViewAllReports) {
+            $validationRules['terminal_id'] = 'nullable|exists:terminals,id';
+        } else {
+            $validationRules['terminal_id'] = 'nullable';
+        }
+
+        $validated = $request->validate($validationRules);
+
+        $employeeRole = Role::where('name', 'Employee')->first();
+
+        $query = Booking::query()
+            ->whereHas('bookedByUser', function ($q) use ($employeeRole) {
+                $q->whereHas('roles', function ($roleQuery) use ($employeeRole) {
+                    $roleQuery->where('role_id', $employeeRole->id);
+                });
+            })
+            ->with([
+                'trip.route',
+                'fromStop.terminal',
+                'toStop.terminal',
+                'seats',
+                'passengers',
+                'bookedByUser.terminal',
+            ]);
+
+        $startDate = Carbon::parse($validated['start_date'])->startOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+
+        $query->whereHas('trip', function ($tripQuery) use ($startDate, $endDate) {
+            $tripQuery->whereBetween('departure_date', [$startDate, $endDate]);
+        });
+
+        if ($canViewAllReports) {
+            if ($request->filled('terminal_id')) {
+                $query->where('terminal_id', $validated['terminal_id']);
+            }
+            if ($request->filled('employee_id')) {
+                $query->where('booked_by_user_id', $validated['employee_id']);
+            }
+        } else {
+            abort_if(! $hasTerminalAssigned, 403, 'You do not have access to any terminal reports.');
+            $query->where('terminal_id', $user->terminal_id);
+
+            if ($request->filled('employee_id') && (int) $request->input('employee_id') !== $user->id) {
+                abort(403, 'You are not allowed to view other employee reports.');
+            }
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('payment_status')) {
+            $query->where('payment_status', $request->payment_status);
+        }
+        if ($request->filled('payment_method')) {
+            $query->where('payment_method', $request->payment_method);
+        }
+        if ($request->filled('channel')) {
+            $query->where('channel', $request->channel);
+        }
+        if ($request->filled('is_advance')) {
+            $query->where('is_advance', $request->is_advance);
+        }
+
+        $bookings = $query
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $rows = $bookings->map(function (Booking $booking) {
+            return [
+                'Booking Number' => $booking->booking_number,
+                'Booking Date' => $booking->created_at ? $booking->created_at->format('Y-m-d H:i') : '',
+                'Route' => $booking->trip && $booking->trip->route ? $booking->trip->route->name : '',
+                'From' => $booking->fromStop && $booking->fromStop->terminal ? $booking->fromStop->terminal->name : '',
+                'To' => $booking->toStop && $booking->toStop->terminal ? $booking->toStop->terminal->name : '',
+                'Departure Date' => $booking->trip && $booking->trip->departure_date ? $booking->trip->departure_date->format('Y-m-d H:i') : '',
+                'Passengers' => $booking->total_passengers ?? $booking->passengers->count(),
+                'Seats' => $booking->seats->pluck('seat_number')->implode(', '),
+                'Booked By' => $booking->bookedByUser ? $booking->bookedByUser->name : '',
+                'Terminal' => $booking->bookedByUser && $booking->bookedByUser->terminal ? $booking->bookedByUser->terminal->name : '',
+                'Status' => $booking->status ? ucfirst($booking->status) : '',
+                'Payment Status' => $booking->payment_status ? ucfirst($booking->payment_status) : '',
+                'Payment Method' => $booking->payment_method ? ucfirst($booking->payment_method) : '',
+                'Total Amount' => $booking->final_amount,
+                'Currency' => $booking->currency,
+            ];
+        });
+
+        $filename = 'bookings_report_'.now()->format('Ymd_His').'.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ];
+
+        $columns = [
+            'Booking Number',
+            'Booking Date',
+            'Route',
+            'From',
+            'To',
+            'Departure Date',
+            'Passengers',
+            'Seats',
+            'Booked By',
+            'Terminal',
+            'Status',
+            'Payment Status',
+            'Payment Method',
+            'Total Amount',
+            'Currency',
+        ];
+
+        $callback = static function () use ($rows, $columns): void {
+            $file = fopen('php://output', 'w');
+
+            fputcsv($file, $columns);
+
+            foreach ($rows as $row) {
+                $line = [];
+                foreach ($columns as $column) {
+                    $line[] = $row[$column] ?? '';
+                }
+                fputcsv($file, $line);
+            }
+
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 }

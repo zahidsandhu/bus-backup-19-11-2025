@@ -841,7 +841,7 @@
             is_advance: document.getElementById('filterAdvance').value || ''
         });
 
-        window.open("{{ route('admin.terminal-reports.employee-bookings-table-data') }}?" + params.toString() + "&export=1", '_blank');
+        window.open("{{ route('admin.terminal-reports.employee-bookings-export') }}?" + params.toString(), '_blank');
     }
 </script>
 @endsection

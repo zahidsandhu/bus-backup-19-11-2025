@@ -352,6 +352,7 @@ Route::middleware(['auth', CheckUserStatus::class])->group(function () {
         Route::get('/terminal-reports/employee-bookings', [TerminalReportController::class, 'employeeBookingsReport'])->can('view terminal reports')->name('terminal-reports.employee-bookings');
         Route::get('/terminal-reports/employee-bookings-data', [TerminalReportController::class, 'getEmployeeBookingsData'])->can('view terminal reports')->name('terminal-reports.employee-bookings-data');
         Route::get('/terminal-reports/employee-bookings-table-data', [TerminalReportController::class, 'getEmployeeBookingsTableData'])->can('view terminal reports')->name('terminal-reports.employee-bookings-table-data');
+        Route::get('/terminal-reports/employee-bookings-export', [TerminalReportController::class, 'exportBookingsCsv'])->can('view terminal reports')->name('terminal-reports.employee-bookings-export');
 
         // Sales Reports Routes (Admin)
         Route::get('/reports', [AdminReportController::class, 'index'])->can('view bookings')->name('reports.index');
