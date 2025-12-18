@@ -229,6 +229,52 @@
             transform: translateY(-2px);
             /* box-shadow: 0 4px 12px rgba(0,0,0,0.3); */
         }
+
+        .seat-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        .seat-table th,
+        .seat-table td {
+            border: 1px solid #ccc;
+            padding: 5px;
+            text-align: left;
+        }
+
+        .seat-table th {
+            background-color: #f0f0f0;
+        }
+
+        .seat-table td {
+            background-color: #ffffff;
+        }
+
+        .seat-table tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .seat-table tbody tr:hover {
+            background-color: #e9ecef;
+        }
+
+        .seat-table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .seat-table tbody tr:first-child {
+            border-top: none;
+        }
+
+        .seat-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .seat-table tbody tr:first-child td {
+            border-top: none;
+        }
+
     </style>
 </head>
 <body>
@@ -283,14 +329,29 @@
                     @endif
                 </p>
 
-                @foreach($seatingMap as $seat)
-                    <p class="seat-info" >SEAT NO. {{ str_pad($seat->seat_number, 2, '0', STR_PAD_LEFT) }} ({{ strtoupper($seat->gender->value ?? '') }})</p>
-                @endforeach
+                <table class="seat-table">
+                    <thead>
+                        <tr>
+                            <th>Seat No</th>
+                            <th>Gender</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach($seatingMap as $seat)
+                        <tr>
+                            <td>{{ str_pad($seat->seat_number, 2, '0', STR_PAD_LEFT) }}</td>
+                            <td>{{ strtoupper($seat->gender->value ?? '') }}</td>
+                        </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+                    {{-- <p class="seat-info" >SEAT NO. {{ str_pad($seat->seat_number, 2, '0', STR_PAD_LEFT) }} ({{ strtoupper($seat->gender->value ?? '') }})</p> --}}
             </div>
 
             <div class="details-body">
-                <p>Sr #&nbsp;&nbsp; 1 &nbsp;&nbsp;&nbsp; Fare&nbsp;&nbsp; {{ $seatFare }}</p>
-                <p>Total Fare: {{ number_format($totalFare,0) }}</p>
+                <p>Fare: PKR {{ number_format($seatFare,0) }}</p>
+                <p style="font-size: 13px;font-weight: bold;">Total Fare: PKR {{ number_format($totalFare,0) }}</p>
+                <p>Sr #&nbsp;&nbsp; 1</p>
                 <p>PNR: {{ $booking->booking_number }}</p>
                 <p>Name: {{ strtoupper($passenger->name ?? 'N/A') }}</p>
                 <p>CNIC: {{ $passenger->cnic ?? 'N/A' }}</p>
