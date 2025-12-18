@@ -920,7 +920,6 @@ class TerminalReportController extends Controller
                 $q->where('id', $request->route_id);
             });
         }
-
         $cancelledBookings = $query->get();
 
         // Calculate statistics
