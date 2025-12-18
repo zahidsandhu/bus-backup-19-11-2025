@@ -11,6 +11,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Validation\Rules;
 
 class CustomerAuthController extends Controller
@@ -26,7 +27,7 @@ class CustomerAuthController extends Controller
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
             'phone' => ['required', 'string', 'max:255'],
             'cnic' => ['required', 'string', 'max:255'],
-            'gender' => ['required', 'string', 'max:255']
+            'gender' => ['required', 'string', 'max:255'],
         ]);
 
         $user = User::create([
@@ -95,6 +96,32 @@ class CustomerAuthController extends Controller
                 'user' => new UserResource($user),
             ],
         ]);
+    }
+
+    /**
+     * Initiate a password reset link for a customer account.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email'],
+        ]);
+
+        $status = Password::broker()->sendResetLink([
+            'email' => $validated['email'],
+        ]);
+
+        if ($status === Password::RESET_LINK_SENT) {
+            return response()->json([
+                'success' => true,
+                'message' => __($status),
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => __($status),
+        ], 422);
     }
 
     /**

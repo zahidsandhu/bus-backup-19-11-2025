@@ -1,14 +1,14 @@
 <?php
 
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Customer\RouteController;
 use App\Http\Controllers\Api\Customer\BannerController;
-use App\Http\Controllers\Api\Customer\TerminalController;
 use App\Http\Controllers\Api\Customer\CustomerAuthController;
 use App\Http\Controllers\Api\Customer\CustomerBookingController;
-use App\Http\Controllers\Api\Customer\CustomerProfileController;
 use App\Http\Controllers\Api\Customer\CustomerComplaintApiController;
+use App\Http\Controllers\Api\Customer\CustomerProfileController;
+use App\Http\Controllers\Api\Customer\RouteController;
+use App\Http\Controllers\Api\Customer\TerminalController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -29,6 +29,7 @@ Route::prefix('customer')->group(function () {
     // Auth
     Route::post('auth/signup', [CustomerAuthController::class, 'signup']);
     Route::post('auth/login', [CustomerAuthController::class, 'login']);
+    Route::post('auth/forgot-password', [CustomerAuthController::class, 'forgotPassword']);
 
     // Public trip search & seat selection endpoints
     Route::get('trips', [CustomerBookingController::class, 'trips']);
@@ -39,7 +40,6 @@ Route::prefix('customer')->group(function () {
     Route::get('terminals', [TerminalController::class, 'terminals']);
     Route::get('terminals/{city_id}', [TerminalController::class, 'terminalsByCity']);
     Route::post('/routes/search', [RouteController::class, 'search']);
-
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/logout', [CustomerAuthController::class, 'logout']);
@@ -73,8 +73,8 @@ Route::get('/routes/{route}/stops', function ($routeId) {
                 'city' => [
                     'id' => $stop->terminal->city->id,
                     'name' => $stop->terminal->city->name,
-                ]
-            ]
+                ],
+            ],
         ];
     });
 });

@@ -239,8 +239,7 @@
 
                                         {{-- LAST 5-SEAT ROW --}}
                                         @if($hasLastFiveRow)
-                                            <div class="seat-row-container last-row-5"
-                                                style="display:flex; justify-content:center; gap:0.5rem">
+                                            <div class="seat-row-container" style="flex-direction: row-reverse;">
                                                 @for ($seat = $startLastRow; $seat <= $totalSeats; $seat++)
                                                     @include('components.seat-button', ['seat' => $seat])
                                                 @endfor
