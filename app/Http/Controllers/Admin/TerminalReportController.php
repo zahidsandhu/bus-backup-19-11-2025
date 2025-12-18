@@ -1382,7 +1382,9 @@ class TerminalReportController extends Controller
         $employeeStats = [];
         foreach ($employees as $employee) {
             $bookings = Booking::where('booked_by_user_id', $employee->id)
-                ->whereBetween('trip.departure_date', [$startDate, $endDate])
+                ->whereHas('trip', function ($query) use ($startDate, $endDate) {
+                    $query->whereBetween('departure_date', [$startDate, $endDate]);
+                })
                 ->with([
                     'trip.route',
                     'fromStop.terminal',
