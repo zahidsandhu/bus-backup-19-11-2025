@@ -176,6 +176,9 @@ class BookingController extends Controller
             ->addColumn('created_at', function (Booking $booking) {
                 return $booking->created_at->format('d M Y, H:i');
             })
+            ->addColumn('departure_date_time', function (Booking $booking) {
+                return $booking->trip?->departure_date?->format('d M Y');
+            })
             ->addColumn('route', function (Booking $booking) {
                 $from = $booking->fromStop?->terminal?->code ?? 'N/A';
                 $to = $booking->toStop?->terminal?->code ?? 'N/A';

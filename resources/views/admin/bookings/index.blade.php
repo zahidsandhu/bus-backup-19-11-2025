@@ -214,6 +214,7 @@
                         <tr>
                             <th><i class="bx bx-ticket"></i> Booking #</th>
                             <th><i class="bx bx-calendar"></i> Date & Time</th>
+                            <th><i class="bx bx-calendar"></i> Departure Date</th>
                             <th><i class="bx bx-route"></i> Route</th>
                             <th><i class="bx bx-user"></i> Passengers</th>
                             <th><i class="bx bx-chair"></i> Seats</th>
@@ -462,6 +463,10 @@
                     {
                         data: 'created_at',
                         name: 'created_at'
+                    },
+                    {
+                        data: 'departure_date_time',
+                        name: 'departure_date_time'
                     },
                     {
                         data: 'route',
