@@ -2216,7 +2216,7 @@ class BookingController extends Controller
         $toCode = $toStop?->terminal?->code ?? '';
 
         // Calculate expenses by type
-        $expenses = $trip->expenses ?? collect();
+        $expenses = $trip->expenses->where('from_terminal_id', $request->from_terminal_id) ?? collect();
         $addaExpense = 0;
         $hakriExpense = 0;
         $otherExpense = 0;
