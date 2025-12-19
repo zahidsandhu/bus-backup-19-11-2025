@@ -146,6 +146,41 @@ class CustomerAuthController extends Controller
     }
 
     /**
+     * Reset the customer password using an OTP.
+     */
+    public function resetPasswordWithOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'otp' => ['required', 'string', 'size:6'],
+            'password' => ['required', Rules\Password::defaults()],
+        ]);
+
+        $passwordResetOtp = PasswordResetOtp::where('otp', $validated['otp'])
+            ->latest()
+            ->first();
+
+        if (! $passwordResetOtp || ! $passwordResetOtp->user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid OTP.',
+            ], 422);
+        }
+
+        $user = $passwordResetOtp->user;
+
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
+
+        PasswordResetOtp::where('user_id', $user->id)->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password has been reset successfully.',
+        ]);
+    }
+
+    /**
      * Revoke the current access token.
      */
     public function logout(Request $request): JsonResponse

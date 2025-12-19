@@ -30,6 +30,7 @@ Route::prefix('customer')->group(function () {
     Route::post('auth/signup', [CustomerAuthController::class, 'signup']);
     Route::post('auth/login', [CustomerAuthController::class, 'login']);
     Route::post('auth/forgot-password', [CustomerAuthController::class, 'forgotPassword']);
+    Route::post('auth/reset-password', [CustomerAuthController::class, 'resetPasswordWithOtp']);
 
     // Public trip search & seat selection endpoints
     Route::get('trips', [CustomerBookingController::class, 'trips']);

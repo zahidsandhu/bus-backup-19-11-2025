@@ -74,11 +74,12 @@ class Booking extends Model
 
     public function fromStop(): BelongsTo
     {
-        return $this->belongsTo(
-            RouteStop::class,
-            'from_stop_id',   // foreign key on bookings
-            'route_id'        // owner key on route_stops
-        );
+        return $this->belongsTo(RouteStop::class, 'from_stop_id');
+        // return $this->belongsTo(
+        //     RouteStop::class,
+        //     'from_stop_id',   // foreign key on bookings
+        //     'route_id'        // owner key on route_stops
+        // );
     }
 
     public function toStop(): BelongsTo
