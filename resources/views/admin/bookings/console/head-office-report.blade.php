@@ -40,7 +40,7 @@
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
+            font-size: 8px;
         }
 
         .data-table th, .data-table td {
@@ -61,6 +61,7 @@
             width: 200px;
             font-weight: bold;
             font-size: 10px;
+            text-align: right;
         }
 
         .left-summary {
@@ -68,6 +69,8 @@
             font-weight: bold;
             font-size: 10px;
             float: right;
+            text-align: right;
+            margin-top: -12px;
         }
 
         .summary-line {
@@ -153,26 +156,22 @@
     <div>
         <div class="header">{{ $companyInitials }}</div>
         <div class="sub-header">{{ $companyTagline }}</div>
-
         <div class="info-lines">
             <div class="line-between">
                 <span><strong>Route:</strong> {{ $routeCode }} <span>{{ $departureTime }}</span></span>
                 <span><strong>Date:</strong> {{ $departureDate }}</span>
             </div>
-
             <div class="line-multi">
                 <span><strong>Vehicle No:</strong> {{ $vehicleNo }}</span>
                 <span><strong>Arrival Time:</strong> {{ $arrivalTime }}</span>
                 <span><strong>Departure Time:</strong> {{ $departureTime }}</span>
                 <span><strong>Voucher No:</strong> {{ $voucherNo }}</span>
             </div>
-
             <div class="line-between">
                 <span><strong>Driver:</strong> {{ $driverName }}</span>
                 <span><strong>Host:</strong> {{ $hostName }}</span>
             </div>
         </div>
-
         <table class="data-table">
             <tr>
                 <th>Seat</th>
@@ -199,8 +198,7 @@
             </tr>
             @endforeach
         </table>
-
-        <div style="font-size:10px; font-weight:bold; border-top:2px solid #000; padding-top:5px; border-bottom:1px solid #000;">
+        {{-- <div style="font-size:10px; font-weight:bold; border-top:2px solid #000; padding-top:5px; border-bottom:1px solid #000;">
             <table style="width:100%; font-size:10px; font-weight:bold;">
                 <tr>
                     <td class="text-align">Printed By:</td>
@@ -218,8 +216,7 @@
                     <td>{{ number_format($otherIncome, 0) }}</td>
                 </tr>
             </table>
-        </div>
-
+        </div> --}}
         <table style="width:100%; font-size:10px; font-weight:bold; margin:5px 0; border-bottom:1px solid #000;">
             <tr>
                 <td class="text-align">Adda:</td>
@@ -232,7 +229,9 @@
                 <td>{{ number_format($totalExpenses, 0) }}</td>
             </tr>
         </table>
-
+        <div class="right-summary">
+            <div class="date-time">{{ $printDateTime }}</div>
+        </div>
         <div class="left-summary">
             <div class="summary-line">
                 <span>Counter Sales:</span>
@@ -250,9 +249,7 @@
                 <span>Balance:</span>
                 <span>{{ number_format($balance, 0) }}</span>
             </div>
-            <div class="date-time">{{ $printDateTime }}</div>
         </div>
     </div>
 </body>
-
 </html>

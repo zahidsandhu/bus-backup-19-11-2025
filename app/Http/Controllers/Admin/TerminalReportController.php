@@ -217,7 +217,7 @@ class TerminalReportController extends Controller
                 return [
                     'id' => $booking->id,
                     'booking_number' => $booking->booking_number,
-                    'from_terminal' => $booking->fromStop?->terminal?->name ?? 'N/A',
+                    'from_terminal' => $booking->fromRouteStop?->terminal?->name ?? 'N/A',
                     'to_terminal' => $booking->toStop?->terminal?->name ?? 'N/A',
                     'channel' => $booking->channel,
                     'status' => $booking->status,
@@ -255,7 +255,7 @@ class TerminalReportController extends Controller
         // ✅ Only get bookings that START from this terminal (from_terminal_id)
         // This matches the passenger filtering logic - terminal staff sees bookings from their terminal
         $query = Booking::query()
-            ->whereHas('fromStop', function ($query) use ($terminalId) {
+            ->whereHas('fromRouteStop', function ($query) use ($terminalId) {
                 $query->where('terminal_id', $terminalId);
             })
             ->where('status', BookingStatusEnum::CONFIRMED->value)
@@ -274,7 +274,7 @@ class TerminalReportController extends Controller
         }
 
         return $query->with([
-            'fromStop.terminal',
+            'fromRouteStop.terminal',
             'toStop.terminal',
             'seats',
             'passengers',
@@ -349,7 +349,7 @@ class TerminalReportController extends Controller
         }
 
         $query = Booking::query()
-            ->whereHas('fromStop', function ($q) use ($terminalId) {
+            ->whereHas('fromRouteStop', function ($q) use ($terminalId) {
                 $q->where('terminal_id', $terminalId);
             })
             ->where('status', BookingStatusEnum::CONFIRMED->value)
@@ -357,7 +357,7 @@ class TerminalReportController extends Controller
                 $query->whereBetween('departure_date', [$startDate, $endDate]);
             })
             ->with([
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -404,7 +404,7 @@ class TerminalReportController extends Controller
                 return $booking->trip->departure_date?->format('d M Y, H:i');
             })
             ->addColumn('route', function (Booking $booking) {
-                $from = $booking->fromStop?->terminal?->code ?? 'N/A';
+                $from = $booking->fromRouteStop?->terminal?->code ?? 'N/A';
                 $to = $booking->toStop?->terminal?->code ?? 'N/A';
 
                 return '<strong>'.$from.' → '.$to.'</strong>';
@@ -530,7 +530,7 @@ class TerminalReportController extends Controller
         }
 
         $query = Booking::query()
-            ->whereHas('fromStop', function ($q) use ($terminalId) {
+            ->whereHas('fromRouteStop', function ($q) use ($terminalId) {
                 $q->where('terminal_id', $terminalId);
             })
             ->where('status', BookingStatusEnum::CONFIRMED->value)
@@ -538,7 +538,7 @@ class TerminalReportController extends Controller
                 $query->whereBetween('departure_date', [$startDate, $endDate]);
             })
             ->with([
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -616,7 +616,7 @@ class TerminalReportController extends Controller
                 $departureTime = Carbon::parse($booking->trip->departure_datetime);
             }
 
-            $fromTerminal = $booking->fromStop->terminal ?? null;
+            $fromTerminal = $booking->fromRouteStop->terminal ?? null;
             $toTerminal = $booking->toStop->terminal ?? null;
             $routeCode = ($fromTerminal?->code ?? '').'-'.($toTerminal?->code ?? '');
             $time = $departureTime ? $departureTime->format('h:i A') : 'N/A';
@@ -894,13 +894,13 @@ class TerminalReportController extends Controller
 
         // Get cancelled bookings
         $query = Booking::query()
-            ->whereHas('fromStop', function ($q) use ($terminalId) {
+            ->whereHas('fromRouteStop', function ($q) use ($terminalId) {
                 $q->where('terminal_id', $terminalId);
             })
             ->whereNotNull('cancelled_at')
             ->whereBetween('cancelled_at', [$startDate, $endDate])
             ->with([
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -989,13 +989,13 @@ class TerminalReportController extends Controller
         $endDate = Carbon::parse($validated['end_date'])->endOfDay();
 
         $query = Booking::query()
-            ->whereHas('fromStop', function ($q) use ($terminalId) {
+            ->whereHas('fromRouteStop', function ($q) use ($terminalId) {
                 $q->where('terminal_id', $terminalId);
             })
             ->whereNotNull('cancelled_at')
             ->whereBetween('cancelled_at', [$startDate, $endDate])
             ->with([
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -1043,7 +1043,7 @@ class TerminalReportController extends Controller
                 return $booking->cancelled_at ? $booking->cancelled_at->format('d M Y, H:i') : '-';
             })
             ->addColumn('route', function (Booking $booking) {
-                $from = $booking->fromStop?->terminal?->code ?? 'N/A';
+                $from = $booking->fromRouteStop?->terminal?->code ?? 'N/A';
                 $to = $booking->toStop?->terminal?->code ?? 'N/A';
 
                 return '<strong>'.$from.' → '.$to.'</strong>';
@@ -1152,13 +1152,13 @@ class TerminalReportController extends Controller
 
         // Get cancelled bookings with all filters
         $query = Booking::query()
-            ->whereHas('fromStop', function ($q) use ($terminalId) {
+            ->whereHas('fromRouteStop', function ($q) use ($terminalId) {
                 $q->where('terminal_id', $terminalId);
             })
             ->whereNotNull('cancelled_at')
             ->whereBetween('cancelled_at', [$startDate, $endDate])
             ->with([
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -1391,7 +1391,7 @@ class TerminalReportController extends Controller
                 })
                 ->with([
                     'trip.route',
-                    'fromStop.terminal',
+                    'fromRouteStop.terminal',
                     'toStop.terminal',
                     'seats',
                     'passengers',
@@ -1498,7 +1498,7 @@ class TerminalReportController extends Controller
             })
             ->with([
                 'trip.route',
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -1561,7 +1561,7 @@ class TerminalReportController extends Controller
                 return 'N/A';
             })
             ->addColumn('from_to', function ($booking) {
-                $from = $booking->fromStop && $booking->fromStop->terminal ? $booking->fromStop->terminal->name : 'N/A';
+                $from = $booking->fromRouteStop && $booking->fromRouteStop->terminal ? $booking->fromRouteStop->terminal->name : 'N/A';
                 $to = $booking->toStop && $booking->toStop->terminal ? $booking->toStop->terminal->name : 'N/A';
                 return $from . ' → ' . $to;
             })
@@ -1647,7 +1647,7 @@ class TerminalReportController extends Controller
             })
             ->with([
                 'trip.route',
-                'fromStop.terminal',
+                'fromRouteStop.terminal',
                 'toStop.terminal',
                 'seats',
                 'passengers',
@@ -1702,7 +1702,7 @@ class TerminalReportController extends Controller
                 'Booking Number' => $booking->booking_number,
                 'Booking Date' => $booking->created_at ? $booking->created_at->format('Y-m-d H:i') : '',
                 'Route' => $booking->trip && $booking->trip->route ? $booking->trip->route->name : '',
-                'From' => $booking->fromStop && $booking->fromStop->terminal ? $booking->fromStop->terminal->name : '',
+                'From' => $booking->fromRouteStop && $booking->fromRouteStop->terminal ? $booking->fromRouteStop->terminal->name : '',
                 'To' => $booking->toStop && $booking->toStop->terminal ? $booking->toStop->terminal->name : '',
                 'Departure Date' => $booking->trip && $booking->trip->departure_date ? $booking->trip->departure_date->format('Y-m-d H:i') : '',
                 'Passengers' => $booking->total_passengers ?? $booking->passengers->count(),
